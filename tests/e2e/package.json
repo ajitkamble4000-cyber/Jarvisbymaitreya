@@ -1,0 +1,10 @@
+{
+  "name": "@jarvis/e2e",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Accessibility checks for the JARVIS AI end-to-end suite (axe-core via Playwright)",
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "axe-core": "4.14.0"
+  }
+}

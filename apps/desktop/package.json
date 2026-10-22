@@ -1,0 +1,33 @@
+{
+  "name": "jarvis-desktop-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "JARVIS Windows desktop agent: an Electron companion that executes approved, typed actions for a paired PC.",
+  "main": "dist/main/index.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build:node": "tsc -p tsconfig.build.json",
+    "build:bundles": "node scripts/build-bundles.mjs",
+    "build": "npm run build:node && npm run build:bundles",
+    "test": "vitest run",
+    "headless": "npm run build:node && node dist/cli/headless.js",
+    "start": "npm run build && electron .",
+    "dist": "npm run build && electron-builder --config electron-builder.yml --win"
+  },
+  "dependencies": {
+    "ws": "8.22.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/ws": "8.18.2",
+    "electron": "44.9.0",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  }
+}

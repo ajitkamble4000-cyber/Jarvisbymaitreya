@@ -1,0 +1,271 @@
+:root {
+  --bg: #f4f5f7;
+  --card: #ffffff;
+  --text: #1c1f24;
+  --muted: #5b6370;
+  --border: #d6dae1;
+  --accent: #2456c8;
+  --accent-text: #ffffff;
+  --danger: #b42318;
+  --ok: #1a7f37;
+  --warn: #9a6700;
+  --chip: #e8ecf3;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171c;
+    --card: #1e222a;
+    --text: #e8ebf0;
+    --muted: #a3acba;
+    --border: #353c48;
+    --accent: #6d93f0;
+    --accent-text: #0e1116;
+    --danger: #ff8a80;
+    --ok: #6fdc8c;
+    --warn: #f0c060;
+    --chip: #2a303b;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #14171c;
+  --card: #1e222a;
+  --text: #e8ebf0;
+  --muted: #a3acba;
+  --border: #353c48;
+  --accent: #6d93f0;
+  --accent-text: #0e1116;
+  --danger: #ff8a80;
+  --ok: #6fdc8c;
+  --warn: #f0c060;
+  --chip: #2a303b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  padding: 0 16px 24px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.app-header {
+  padding: 16px 0 8px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+h3 {
+  margin: 14px 0 4px;
+  font-size: 13px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+main {
+  display: grid;
+  gap: 12px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.banner {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--warn);
+  color: #1c1400;
+  font-weight: 600;
+}
+
+.hint,
+.detail {
+  margin: 4px 0 10px;
+  color: var(--muted);
+}
+
+.detail:empty {
+  display: none;
+}
+
+.state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.dot[data-state="connected"] {
+  background: var(--ok);
+}
+
+.dot[data-state="connecting"],
+.dot[data-state="offline"],
+.dot[data-state="paired"] {
+  background: var(--warn);
+}
+
+.dot[data-state="error"],
+.dot[data-state="re-pair-required"] {
+  background: var(--danger);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  margin: 10px 0;
+}
+
+.facts dt {
+  color: var(--muted);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+form {
+  display: grid;
+  gap: 10px;
+}
+
+label {
+  display: grid;
+  gap: 4px;
+  font-weight: 600;
+}
+
+input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 400;
+}
+
+input:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  min-height: 36px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+  justify-self: start;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.resource-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.resource-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+
+.resource-list li:last-child {
+  border-bottom: none;
+}
+
+.resource-list .empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.resource-list .id {
+  color: var(--muted);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chips li {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--chip);
+  font-size: 12px;
+}
+
+@media (max-width: 420px) {
+  body {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}

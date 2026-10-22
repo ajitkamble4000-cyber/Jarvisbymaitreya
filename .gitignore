@@ -1,0 +1,51 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.key
+secret.key
+data/
+*.p12
+
+# Database dumps written by scripts/backup-db.sh (they contain user data)
+backups/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Node / web / desktop
+node_modules/
+apps/web/dist/
+apps/web/coverage/
+apps/desktop/dist/
+apps/desktop/out/
+apps/desktop/release/
+apps/desktop/coverage/
+*.log
+npm-debug.log*
+
+# Playwright and test output
+test-results/
+playwright-report/
+blob-report/
+tests/e2e/.artifacts/
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Extra CA certificates copied into image builds (local only; see extra-ca/README.md)
+services/api/extra-ca/*.crt
+apps/web/extra-ca/*.crt

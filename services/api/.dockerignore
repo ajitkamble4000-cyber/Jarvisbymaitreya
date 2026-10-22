@@ -1,0 +1,18 @@
+# The image copies only pyproject.toml, app/, alembic/ and alembic.ini (see Dockerfile).
+# Keep the host virtualenv, caches, tests and local data out of the build context.
+.venv
+venv
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+*.egg-info
+build
+dist
+tests
+data
+.env
+.env.*
+!.env.example
+*.log

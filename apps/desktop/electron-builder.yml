@@ -1,0 +1,18 @@
+appId: ai.jarvis.desktop-agent
+productName: JARVIS Agent
+artifactName: "${productName}-${version}-${arch}.${ext}"
+directories:
+  output: release
+files:
+  - dist/**/*
+  - assets/**/*
+  - package.json
+asar: true
+win:
+  target:
+    - nsis
+  signAndEditExecutable: false
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true

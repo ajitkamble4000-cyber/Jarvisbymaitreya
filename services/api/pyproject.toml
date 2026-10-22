@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jarvis-api"
+version = "1.0.0"
+description = "JARVIS AI backend: FastAPI service for AI providers, devices, tasks, scheduling and memory."
+requires-python = ">=3.12"
+# All versions are pinned exactly. Upgrade deliberately and re-run the test suite.
+dependencies = [
+    "fastapi==0.146.0",
+    "uvicorn==0.54.0",
+    "websockets==17.2",
+    "pydantic==2.14.1",
+    "pydantic-settings==2.16.0",
+    "sqlalchemy[asyncio]==2.1.5",
+    "asyncpg==0.32.0",
+    "alembic==1.20.0",
+    "httpx==0.28.1",
+    "cryptography==50.0.2",
+    "argon2-cffi==25.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "integration: requires the embedded PostgreSQL test server (pgserver)",
+]

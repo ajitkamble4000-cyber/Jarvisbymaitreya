@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JARVIS Agent</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>JARVIS Agent</h1>
+      <p id="status-banner" class="banner" hidden></p>
+    </header>
+
+    <main>
+      <section class="card" aria-labelledby="status-heading">
+        <h2 id="status-heading">Connection</h2>
+        <p class="state">
+          <span id="status-dot" class="dot" data-state="unknown" aria-hidden="true"></span>
+          <span id="status-state">Loading</span>
+        </p>
+        <p id="status-message" class="detail"></p>
+        <dl class="facts">
+          <dt>Device</dt>
+          <dd id="status-device">Not paired</dd>
+          <dt>Server</dt>
+          <dd id="status-server">None</dd>
+        </dl>
+        <div class="actions">
+          <button id="unpair-button" type="button" class="secondary" disabled>Unpair</button>
+          <button id="open-folder-button" type="button" class="secondary">Open config folder</button>
+        </div>
+        <p id="action-message" class="detail" role="status"></p>
+      </section>
+
+      <section class="card" aria-labelledby="pair-heading">
+        <h2 id="pair-heading">Pair this PC</h2>
+        <p class="hint">
+          In the web app, open Connected Devices and create a pairing code. Enter it here before it expires.
+        </p>
+        <form id="pair-form" autocomplete="off">
+          <label>
+            Server address
+            <input id="server-url" name="serverUrl" type="url" required maxlength="2048" placeholder="https://jarvis.example.com" />
+          </label>
+          <label>
+            Pairing code
+            <input id="pair-code" name="code" type="text" required maxlength="32" placeholder="XXXX-XXXX" spellcheck="false" />
+          </label>
+          <label>
+            Device name (optional)
+            <input id="device-name" name="deviceName" type="text" maxlength="120" />
+          </label>
+          <button id="pair-button" type="submit" class="primary">Pair</button>
+        </form>
+        <p id="pair-message" class="detail" role="status"></p>
+      </section>
+
+      <section class="card" aria-labelledby="resources-heading">
+        <h2 id="resources-heading">Approved on this PC</h2>
+        <p class="hint">JARVIS can use only these items. Local paths stay on this PC and are never shown here.</p>
+        <h3>Apps</h3>
+        <ul id="apps" class="resource-list"></ul>
+        <h3>Websites</h3>
+        <ul id="urls" class="resource-list"></ul>
+        <h3>Folders</h3>
+        <ul id="folders" class="resource-list"></ul>
+        <h3>Projects</h3>
+        <ul id="projects" class="resource-list"></ul>
+        <h3>Files</h3>
+        <ul id="files" class="resource-list"></ul>
+        <h3>Enabled actions</h3>
+        <ul id="capabilities" class="chips"></ul>
+      </section>
+    </main>
+
+    <script src="main.js"></script>
+  </body>
+</html>

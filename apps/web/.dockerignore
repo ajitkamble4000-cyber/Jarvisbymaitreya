@@ -1,0 +1,16 @@
+# Host-side dependencies and build output. The image installs its own node_modules with npm ci;
+# copying the host's copy would overwrite it with binaries built for another platform.
+node_modules
+dist
+coverage
+npm-debug.log*
+*.log
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Not needed to build the static bundle
+README.md
+.gitignore

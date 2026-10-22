@@ -1,0 +1,9 @@
+node_modules/
+dist/
+release/
+coverage/
+*.log
+.env
+agent.json
+outbox.json
+secrets.json

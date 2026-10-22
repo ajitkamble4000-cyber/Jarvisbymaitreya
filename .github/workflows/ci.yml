@@ -1,0 +1,170 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# Read-only token, no secrets, no deployment. The test credentials below only address the throw-away
+# service container of each job.
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: jarvis
+          POSTGRES_PASSWORD: jarvis
+          POSTGRES_DB: jarvis_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jarvis -d jarvis_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      JARVIS_TEST_DATABASE_URL: postgresql+asyncpg://jarvis:jarvis@127.0.0.1:5432/jarvis_test
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install the API with dev dependencies
+        run: python -m pip install -e "services/api[dev]"
+      - name: Create the pgvector template database
+        env:
+          PGPASSWORD: jarvis
+        run: |
+          psql -h 127.0.0.1 -U jarvis -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE jarvis_vector_template'
+          psql -h 127.0.0.1 -U jarvis -d jarvis_vector_template -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION IF NOT EXISTS vector'
+      - name: Check that alembic has exactly one head
+        working-directory: services/api
+        run: |
+          alembic heads
+          count=$(alembic heads | grep -c "(head)" || true)
+          test "$count" = "1"
+      - name: Run the backend tests
+        working-directory: services/api
+        run: pytest -q
+
+  desktop:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Install dependencies
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npm run build
+
+  web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npm run build
+
+  e2e:
+    needs: [backend, desktop, web]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: jarvis
+          POSTGRES_PASSWORD: jarvis
+          POSTGRES_DB: jarvis_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jarvis -d jarvis_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Create the backend virtualenv where the e2e fixtures expect it
+        run: |
+          python -m venv services/api/.venv
+          services/api/.venv/bin/python -m pip install -e "services/api[dev]"
+      - name: Create the pgvector template database
+        env:
+          PGPASSWORD: jarvis
+        run: |
+          psql -h 127.0.0.1 -U jarvis -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE jarvis_vector_template'
+          psql -h 127.0.0.1 -U jarvis -d jarvis_vector_template -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION IF NOT EXISTS vector'
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install web dependencies and build the web app
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+      - name: Install Playwright Chromium
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+      - name: Point the e2e config at the installed Chromium
+        working-directory: apps/web
+        run: |
+          echo "CHROMIUM_PATH=$(node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())")" >> "$GITHUB_ENV"
+      - name: Run the milestone end-to-end test
+        working-directory: apps/web
+        run: npx playwright test --config ../../tests/e2e/playwright.config.ts

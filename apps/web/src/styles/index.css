@@ -1,0 +1,161 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. The base (:root) values are the light palette. Dark values apply when the
+ * viewer selects dark, or when the system prefers dark and the theme is not forced to light.
+ * The accent colour is written at runtime by ThemeProvider from settings.appearance.accent_color.
+ */
+:root {
+  --canvas: #f5f6fa;
+  --surface: #ffffff;
+  --raised: #eef0f6;
+  --line: #d5dae5;
+  --ink: #111827;
+  --muted: #4b5563;
+  --accent: #0e7490;
+  --on-accent: #ffffff;
+  --danger: #b91c1c;
+  --warning: #92400e;
+  --success: #047857;
+  --info: #1d4ed8;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #0b0d12;
+    --surface: #12151c;
+    --raised: #1a1f2a;
+    --line: #2a3140;
+    --ink: #e8ebf2;
+    --muted: #a3acbf;
+    --accent: #22d3ee;
+    --on-accent: #04171d;
+    --danger: #fca5a5;
+    --warning: #fcd34d;
+    --success: #6ee7b7;
+    --info: #93c5fd;
+    color-scheme: dark;
+  }
+}
+
+/* High contrast: pure black and white for text and borders, with brighter accents. Every text colour is at least 7:1 against the canvas. */
+:root[data-theme="high-contrast"] {
+  --canvas: #000000;
+  --surface: #000000;
+  --raised: #111111;
+  --line: #bfc6d4;
+  --ink: #ffffff;
+  --muted: #e5e7eb;
+  --accent: #67e8f9;
+  --on-accent: #000000;
+  --danger: #fecaca;
+  --warning: #fde68a;
+  --success: #a7f3d0;
+  --info: #bfdbfe;
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] {
+  --canvas: #0b0d12;
+  --surface: #12151c;
+  --raised: #1a1f2a;
+  --line: #2a3140;
+  --ink: #e8ebf2;
+  --muted: #a3acbf;
+  --accent: #22d3ee;
+  --on-accent: #04171d;
+  --danger: #fca5a5;
+  --warning: #fcd34d;
+  --success: #6ee7b7;
+  --info: #93c5fd;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --color-info: var(--info);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: ui-serif, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  --radius-card: 0.875rem;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  background-color: var(--canvas);
+}
+
+:root[data-font-size="small"] {
+  font-size: 14px;
+}
+
+:root[data-font-size="large"] {
+  font-size: 18px;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--canvas);
+  background-image:
+    radial-gradient(60rem 30rem at 0% -10%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 70%),
+    radial-gradient(40rem 25rem at 100% 0%, color-mix(in oklab, var(--info) 9%, transparent), transparent 70%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2 {
+  font-family: ui-serif, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Reduced motion: the setting (data-reduced-motion="true") or the OS preference unless forced off. */
+:root[data-reduced-motion="true"] *,
+:root[data-reduced-motion="true"] *::before,
+:root[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-reduced-motion="false"]) *,
+  :root:not([data-reduced-motion="false"]) *::before,
+  :root:not([data-reduced-motion="false"]) *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Native form controls follow the theme. */
+select,
+input,
+textarea {
+  color-scheme: inherit;
+}

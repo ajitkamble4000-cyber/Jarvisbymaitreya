@@ -1,0 +1,74 @@
+# Local development stack. Run: cp .env.example .env && docker compose up --build
+# PostgreSQL uses the pgvector image so semantic memory search can be enabled later.
+name: jarvis-ai
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: jarvis
+      POSTGRES_USER: jarvis
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jarvis}
+    ports:
+      # Host port is configurable so a local PostgreSQL on 5432 does not clash.
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - jarvis-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jarvis -d jarvis"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - jarvis
+
+  api:
+    build:
+      context: ./services/api
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://jarvis:${POSTGRES_PASSWORD:-jarvis}@postgres:5432/jarvis
+      DATA_DIR: /app/data
+      # Only the web container's nginx may supply X-Forwarded-For (fixed address below).
+      FORWARDED_ALLOW_IPS: 172.30.0.10
+    volumes:
+      - jarvis-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - jarvis
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/live', timeout=3).status == 200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        VITE_API_BASE_URL: ""
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      jarvis:
+        ipv4_address: 172.30.0.10
+    ports:
+      - "127.0.0.1:5173:8080"
+    restart: unless-stopped
+
+networks:
+  jarvis:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+volumes:
+  jarvis-pgdata:
+  jarvis-data:
