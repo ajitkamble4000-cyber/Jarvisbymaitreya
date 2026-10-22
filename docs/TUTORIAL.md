@@ -36,11 +36,9 @@ and never committed.
 ### 1.1 Download the repository
 
 ```sh
-git clone <repository-url> jarvis-ai
-cd jarvis-ai
+git clone https://github.com/ajitkamble4000-cyber/jarvisbymaitreya.git
+cd jarvisbymaitreya
 ```
-
-Replace `<repository-url>` with the address of the GitHub repository you were given.
 
 ### 1.2 Create your settings file
 
