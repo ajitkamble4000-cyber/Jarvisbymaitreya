@@ -33,6 +33,19 @@ and never committed.
 
 ## Part 1: install from GitHub
 
+### 1.0 The easy way on Windows: one command
+
+Press the Windows key, type **PowerShell**, press Enter. Paste this line and press Enter:
+
+```powershell
+irm https://raw.githubusercontent.com/ajitkamble4000-cyber/jarvisbymaitreya/main/install.ps1 | iex
+```
+
+It installs Git, Node.js and Docker Desktop if they are missing, downloads JARVIS, starts it, builds the desktop agent,
+creates the **JARVIS** and **JARVIS Web** icons on your desktop, and starts the agent when you sign in. Then go to
+[Part 2](#part-2-first-time-setup-in-the-web-app). The steps 1.1 to 1.3 below are the same work done by hand, for any system
+with Git and Docker.
+
 ### 1.1 Download the repository
 
 ```sh

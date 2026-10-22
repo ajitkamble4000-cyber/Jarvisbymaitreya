@@ -7,11 +7,29 @@ desktop agent checks against its local allowlist before it runs.
 
 Run the milestone flow, check what is verified, and read the limitations before relying on any feature.
 
-## Quick start (copy and paste)
+## Quick start (Windows, one command)
 
-You need [Git](https://git-scm.com) and Docker (Docker Desktop on Windows and macOS, Docker Engine on Linux).
+Press the Windows key, type **PowerShell**, press Enter. Paste this line and press Enter:
 
-**1. Download and start the backend and web app.** In a terminal (PowerShell, macOS Terminal or Linux shell):
+```powershell
+irm https://raw.githubusercontent.com/ajitkamble4000-cyber/jarvisbymaitreya/main/install.ps1 | iex
+```
+
+The installer does everything else:
+
+- installs Git, Node.js and Docker Desktop if they are missing (with winget; Windows may ask for permission);
+- downloads JARVIS to `%USERPROFILE%\JARVIS` and starts the backend and the web app with Docker;
+- builds the desktop agent and puts **JARVIS** and **JARVIS Web** icons on your desktop and in the Start menu;
+- starts the agent when you sign in, so it is ready after a restart.
+
+The first run takes about 10 to 20 minutes. Run the same line again any time to update JARVIS. Your settings and data are kept.
+If Docker Desktop asks for a restart or WSL 2, do that, then run the line again.
+
+Then, once, in the web app at http://127.0.0.1:5173: create the owner account, add your Google Gemini key on **AI Models**,
+and pair the agent from **Devices** (enter `http://127.0.0.1:8000` and the code in the agent window). Press **Ctrl+Space**
+anywhere for the quick window, or switch on **Hey JARVIS** in Settings → Voice.
+
+### Manual install (any system with Git and Docker)
 
 ```sh
 git clone https://github.com/ajitkamble4000-cyber/jarvisbymaitreya.git
@@ -20,26 +38,8 @@ cp .env.example .env
 docker compose up --build
 ```
 
-In PowerShell, replace the `cp` line with `Copy-Item .env.example .env`. Leave this terminal running.
-
-**2. Open JARVIS.** Go to http://127.0.0.1:5173 and create the owner account (a password of at least 12 characters).
-Then open **AI Models**, paste your Google Gemini API key, press **Save key**, then **Test connection**.
-
-**3. Start the Windows desktop agent** (needs Node.js 22). In a second PowerShell window, in the folder where you ran `git clone`:
-
-```powershell
-cd jarvisbymaitreya\apps\desktop
-npm install
-npm start
-```
-
-In the web app, open **Devices**, press **Create pairing code**, then enter `http://127.0.0.1:8000` and that code in the
-agent window.
-
-**4. Try it.** In **Chat**, type `open Google Chrome on my laptop`, then press **Approve**. Press **Ctrl+Space** anywhere on
-the PC for the quick window, or switch on **Hey JARVIS** in Settings → Voice.
-
-The full walkthrough, with troubleshooting and limits, is [docs/TUTORIAL.md](docs/TUTORIAL.md).
+On Windows PowerShell, use `Copy-Item .env.example .env` instead of `cp`. Then start the desktop agent with `cd apps\desktop`,
+`npm install` and `npm start`.
 
 **New here?** Start with [docs/TUTORIAL.md](docs/TUTORIAL.md): what JARVIS is, how to install it from GitHub, pair your PC, and use Ctrl+Space and "Hey JARVIS".
 
