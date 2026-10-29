@@ -74,7 +74,7 @@ jobs:
       - name: Verify Windows executable
         shell: pwsh
         run: |
-          $installer = Get-ChildItem "release/*.exe" | Select-Object -First 1
+          $installer = Get-ChildItem "apps/desktop/release/*.exe" | Select-Object -First 1
           if ($null -eq $installer -or $installer.Length -le 0) { throw "Windows installer is missing or empty." }
 
       - name: Upload Windows build artifacts
