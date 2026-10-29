@@ -30,6 +30,7 @@ apps/desktop/dist/
 apps/desktop/out/
 apps/desktop/release/
 apps/desktop/coverage/
+apps/android/local.properties
 *.log
 npm-debug.log*
 
@@ -42,6 +43,7 @@ tests/e2e/.artifacts/
 # Editors and OS
 .idea/
 .vscode/
+apps/android/.gradle/
 *.swp
 .DS_Store
 Thumbs.db

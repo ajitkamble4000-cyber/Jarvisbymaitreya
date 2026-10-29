@@ -83,7 +83,10 @@ object JarvisApi {
         val values = response.optJSONArray("items") ?: return emptyList()
         return (0 until values.length()).mapNotNull { index ->
             val item = values.optJSONObject(index) ?: return@mapNotNull null
-            item.optString("title").ifBlank { item.optString("content") }.ifBlank { item.optString("description") }
+            item.optString("title")
+                .ifBlank { item.optString("content") }
+                .ifBlank { item.optString("description") }
+                .ifBlank { item.optString("body") }
         }
     }
 

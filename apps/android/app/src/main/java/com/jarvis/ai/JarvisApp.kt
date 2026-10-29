@@ -55,7 +55,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private enum class AppPage(val title: String) {
-    HOME("JARVIS"), CHAT("Chat"), TASKS("Tasks"), MEMORY("Memory"), SETTINGS("Settings")
+    HOME("JARVIS"), CHAT("Chat"), TASKS("Tasks"), MEMORY("Memory"), NOTIFICATIONS("Notifications"), SETTINGS("Settings")
 }
 
 private data class ChatLine(val user: Boolean, val text: String)
@@ -101,6 +101,7 @@ fun JarvisApp() {
         val resource = when (page) {
             AppPage.TASKS -> "tasks"
             AppPage.MEMORY -> "memory"
+            AppPage.NOTIFICATIONS -> "notifications"
             else -> null
         }
         if (resource != null && authenticated) {
@@ -187,7 +188,7 @@ fun JarvisApp() {
                     Text(if (page == AppPage.HOME) "JARVIS AI" else page.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(if (authenticated) "Connected" else "Not connected", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
-                IconButton(onClick = { notice = "You’re all caught up." }) {
+                IconButton(onClick = { page = AppPage.NOTIFICATIONS }) {
                     Icon(Icons.Default.Notifications, contentDescription = "Notifications")
                 }
                 IconButton(onClick = { urlDraft = baseUrl; page = AppPage.SETTINGS }) {
@@ -205,6 +206,7 @@ fun JarvisApp() {
                     onConnect = { page = AppPage.SETTINGS },
                 )
                 AppPage.CHAT -> ChatContent(
+                    modifier = Modifier.weight(1f),
                     lines = chatLines,
                     draft = draft,
                     busy = chatBusy,
@@ -247,6 +249,7 @@ fun JarvisApp() {
                 )
                 AppPage.TASKS -> RecordsContent(title = "Tasks", items = records, loading = loading, empty = "No tasks yet.")
                 AppPage.MEMORY -> RecordsContent(title = "Memory", items = records, loading = loading, empty = "No saved memories yet.")
+                AppPage.NOTIFICATIONS -> RecordsContent(title = "Notifications", items = records, loading = loading, empty = "No notifications yet.")
             }
 
             error?.let { InlineMessage(it, isError = true) }
@@ -350,13 +353,14 @@ private fun SettingsContent(
 
 @Composable
 private fun ChatContent(
+    modifier: Modifier = Modifier,
     lines: List<ChatLine>,
     draft: String,
     busy: Boolean,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (lines.isEmpty()) item { Text("Ask JARVIS anything. Your message will use the provider configured on your server.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             items(lines) { line ->
