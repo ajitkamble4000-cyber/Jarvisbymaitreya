@@ -110,6 +110,35 @@ jobs:
       - name: Build
         run: npm run build
 
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+      - name: Install Android 35 build components
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Run Android unit and emulator UI tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: cd apps/android && ./gradlew --no-daemon testDebugUnitTest connectedDebugAndroidTest assembleDebug
+
   e2e:
     needs: [backend, desktop, web]
     runs-on: ubuntu-24.04

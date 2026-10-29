@@ -1,6 +1,7 @@
 package com.jarvis.ai
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -198,6 +200,7 @@ fun JarvisApp() {
 
             when (page) {
                 AppPage.HOME -> HomeContent(
+                    modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
                     authenticated = authenticated,
                     loading = loading,
                     onOpenChat = { page = AppPage.CHAT },
@@ -214,6 +217,7 @@ fun JarvisApp() {
                     onSend = ::sendMessage,
                 )
                 AppPage.SETTINGS -> SettingsContent(
+                    modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
                     baseUrl = urlDraft,
                     email = email,
                     password = password,
@@ -247,9 +251,18 @@ fun JarvisApp() {
                         }
                     },
                 )
-                AppPage.TASKS -> RecordsContent(title = "Tasks", items = records, loading = loading, empty = "No tasks yet.")
-                AppPage.MEMORY -> RecordsContent(title = "Memory", items = records, loading = loading, empty = "No saved memories yet.")
-                AppPage.NOTIFICATIONS -> RecordsContent(title = "Notifications", items = records, loading = loading, empty = "No notifications yet.")
+                AppPage.TASKS -> RecordsContent(
+                    modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                    title = "Tasks", items = records, loading = loading, empty = "No tasks yet.",
+                )
+                AppPage.MEMORY -> RecordsContent(
+                    modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                    title = "Memory", items = records, loading = loading, empty = "No saved memories yet.",
+                )
+                AppPage.NOTIFICATIONS -> RecordsContent(
+                    modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                    title = "Notifications", items = records, loading = loading, empty = "No notifications yet.",
+                )
             }
 
             error?.let { InlineMessage(it, isError = true) }
@@ -267,6 +280,7 @@ fun JarvisApp() {
 
 @Composable
 private fun HomeContent(
+    modifier: Modifier = Modifier,
     authenticated: Boolean,
     loading: Boolean,
     onOpenChat: () -> Unit,
@@ -274,7 +288,7 @@ private fun HomeContent(
     onOpenMemory: () -> Unit,
     onConnect: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Your assistant is ready.", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text("Chat, review tasks, and manage saved memories from one place.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (!authenticated) {
@@ -314,6 +328,7 @@ private fun ActionCard(title: String, description: String, icon: androidx.compos
 
 @Composable
 private fun SettingsContent(
+    modifier: Modifier = Modifier,
     baseUrl: String,
     email: String,
     password: String,
@@ -329,7 +344,7 @@ private fun SettingsContent(
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Connection", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         OutlinedTextField(baseUrl, onBaseUrlChange, modifier = Modifier.fillMaxWidth(), label = { Text("Backend URL") }, placeholder = { Text("https://your-server") }, singleLine = true)
         Text("For the Android emulator use http://10.0.2.2:8000. On a phone, use your server’s reachable URL.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -391,8 +406,8 @@ private fun ChatContent(
 }
 
 @Composable
-private fun RecordsContent(title: String, items: List<String>, loading: Boolean, empty: String) {
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+private fun RecordsContent(modifier: Modifier = Modifier, title: String, items: List<String>, loading: Boolean, empty: String) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         when {
             loading -> CircularProgressIndicator()
