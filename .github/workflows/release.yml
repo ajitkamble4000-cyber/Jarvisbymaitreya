@@ -50,7 +50,32 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          script: cd apps/android && ./gradlew --no-daemon connectedDebugAndroidTest
+          script: |
+            cd apps/android
+            set +e
+            ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1024m connectedDebugAndroidTest
+            result=$?
+            if [ "$result" -ne 0 ]; then
+              mkdir -p build/ci-diagnostics
+              adb logcat -d -t 10000 > build/ci-diagnostics/logcat.txt || true
+              adb shell dumpsys activity processes > build/ci-diagnostics/activity-processes.txt || true
+            fi
+            exit "$result"
+
+      - name: Capture Android emulator logcat
+        if: always()
+        run: adb logcat -d -t 10000 > apps/android/build/ci-diagnostics/final-logcat.txt || true
+
+      - name: Upload Android test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-test-diagnostics
+          if-no-files-found: ignore
+          path: |
+            apps/android/app/build/reports/androidTests/connected/
+            apps/android/app/build/outputs/androidTest-results/
+            apps/android/build/ci-diagnostics/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

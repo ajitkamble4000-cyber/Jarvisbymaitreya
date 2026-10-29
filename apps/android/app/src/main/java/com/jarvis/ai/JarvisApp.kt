@@ -86,6 +86,7 @@ fun JarvisApp() {
     var chatBusy by remember { mutableStateOf(false) }
     val chatLines = remember { mutableStateListOf<ChatLine>() }
     var records by remember { mutableStateOf<List<String>>(emptyList()) }
+    var taskItems by remember { mutableStateOf<List<TaskItem>>(emptyList()) }
 
     LaunchedEffect(baseUrl) {
         loading = true
@@ -100,8 +101,15 @@ fun JarvisApp() {
     }
 
     LaunchedEffect(page, authenticated) {
+        if (page == AppPage.TASKS && authenticated) {
+            loading = true
+            runCatching { withContext(Dispatchers.IO) { JarvisApi.listTasks(baseUrl) } }
+                .onSuccess { taskItems = it }
+                .onFailure { error = it.message ?: "Could not load tasks." }
+            loading = false
+            return@LaunchedEffect
+        }
         val resource = when (page) {
-            AppPage.TASKS -> "tasks"
             AppPage.MEMORY -> "memory"
             AppPage.NOTIFICATIONS -> "notifications"
             else -> null
@@ -111,6 +119,20 @@ fun JarvisApp() {
             runCatching { withContext(Dispatchers.IO) { JarvisApi.listItems(baseUrl, resource) } }
                 .onSuccess { records = it }
                 .onFailure { error = it.message ?: "Could not load $resource." }
+            loading = false
+        }
+    }
+
+    fun performTaskAction(task: TaskItem, action: TaskAction) {
+        if (loading) return
+        loading = true
+        error = null
+        scope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) { JarvisApi.runTaskAction(baseUrl, task.id, action) }
+                withContext(Dispatchers.IO) { JarvisApi.listTasks(baseUrl) }
+            }.onSuccess { taskItems = it }
+                .onFailure { error = it.message ?: "Could not ${action.path} this task." }
             loading = false
         }
     }
@@ -251,9 +273,9 @@ fun JarvisApp() {
                         }
                     },
                 )
-                AppPage.TASKS -> RecordsContent(
+                AppPage.TASKS -> TaskRecordsContent(
                     modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
-                    title = "Tasks", items = records, loading = loading, empty = "No tasks yet.",
+                    title = "Tasks", items = taskItems, loading = loading, authenticated = authenticated, onAction = ::performTaskAction,
                 )
                 AppPage.MEMORY -> RecordsContent(
                     modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
@@ -406,6 +428,44 @@ private fun ChatContent(
 }
 
 @Composable
+private fun TaskRecordsContent(
+    modifier: Modifier = Modifier,
+    title: String,
+    items: List<TaskItem>,
+    loading: Boolean,
+    authenticated: Boolean,
+    onAction: (TaskItem, TaskAction) -> Unit,
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        when {
+            loading -> CircularProgressIndicator()
+            !authenticated -> Text("Sign in to load your tasks.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            items.isEmpty() -> Text("No tasks yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            else -> items.forEach { task ->
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(task.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Text(task.status.replace('_', ' ').uppercase(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        task.detail?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                        task.error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                        if (task.actions.isNotEmpty()) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                TaskAction.entries.filter { it in task.actions }.forEach { action ->
+                                    OutlinedButton(onClick = { onAction(task, action) }, enabled = !loading) {
+                                        Text(action.label)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun RecordsContent(modifier: Modifier = Modifier, title: String, items: List<String>, loading: Boolean, empty: String) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -420,6 +480,14 @@ private fun RecordsContent(modifier: Modifier = Modifier, title: String, items: 
         }
     }
 }
+
+private val TaskAction.label: String
+    get() = when (this) {
+        TaskAction.APPROVE -> "Approve"
+        TaskAction.DENY -> "Deny"
+        TaskAction.CANCEL -> "Cancel"
+        TaskAction.RETRY -> "Retry"
+    }
 
 @Composable
 private fun BottomNavigation(page: AppPage, onSelect: (AppPage) -> Unit) {

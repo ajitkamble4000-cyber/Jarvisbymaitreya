@@ -104,6 +104,18 @@ object JarvisApi {
         }
     }
 
+    fun listTasks(baseUrl: String): List<TaskItem> {
+        val response = request(baseUrl, "GET", "/tasks?limit=20")
+        val values = response.optJSONArray("items") ?: return emptyList()
+        return (0 until values.length()).mapNotNull { index ->
+            values.optJSONObject(index)?.let(::taskItemFromJson)
+        }
+    }
+
+    fun runTaskAction(baseUrl: String, taskId: String, action: TaskAction) {
+        request(baseUrl, "POST", "/tasks/$taskId/${action.path}")
+    }
+
     private fun request(baseUrl: String, method: String, path: String, body: JSONObject? = null): JSONObject {
         val connection = openConnection(baseUrl, method, path)
         if (body != null) {
@@ -141,4 +153,63 @@ object JarvisApi {
         return runCatching { JSONObject(text).getJSONObject("error").getString("message") }
             .getOrElse { "JARVIS server returned HTTP ${connection.responseCode}" }
     }
+}
+
+enum class TaskAction(val path: String) {
+    APPROVE("approve"), DENY("deny"), CANCEL("cancel"), RETRY("retry")
+}
+
+data class TaskItem(
+    val id: String,
+    val title: String,
+    val status: String,
+    val detail: String?,
+    val error: String?,
+    val actions: Set<TaskAction>,
+)
+
+internal fun taskItemFromJson(json: JSONObject): TaskItem {
+    val actionJson = json.optJSONObject("actions") ?: JSONObject()
+    val result = json.optJSONObject("result")
+    val errorMessage = json.optJSONObject("error")?.optString("message")?.takeIf(String::isNotBlank)
+    val detail = json.optString("current_step").takeIf(String::isNotBlank)
+        ?: result?.optString("message")?.takeIf(String::isNotBlank)
+    return taskItemFromFields(
+        id = json.optString("id"),
+        title = json.optString("title"),
+        status = json.optString("status"),
+        detail = detail,
+        error = errorMessage,
+        canApprove = actionJson.optBoolean("approve"),
+        canDeny = actionJson.optBoolean("deny"),
+        canCancel = actionJson.optBoolean("cancel"),
+        canRetry = actionJson.optBoolean("retry"),
+    )
+}
+
+internal fun taskItemFromFields(
+    id: String,
+    title: String,
+    status: String,
+    detail: String?,
+    error: String?,
+    canApprove: Boolean,
+    canDeny: Boolean,
+    canCancel: Boolean,
+    canRetry: Boolean,
+): TaskItem {
+    val available = buildSet {
+        if (canApprove) add(TaskAction.APPROVE)
+        if (canDeny) add(TaskAction.DENY)
+        if (canCancel) add(TaskAction.CANCEL)
+        if (canRetry) add(TaskAction.RETRY)
+    }
+    return TaskItem(
+        id = id,
+        title = title.ifBlank { "Untitled task" },
+        status = status.ifBlank { "unknown" },
+        detail = detail,
+        error = error,
+        actions = available,
+    )
 }

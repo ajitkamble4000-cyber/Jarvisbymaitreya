@@ -137,7 +137,31 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          script: cd apps/android && ./gradlew --no-daemon testDebugUnitTest connectedDebugAndroidTest assembleDebug
+          script: |
+            cd apps/android
+            set +e
+            ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1024m testDebugUnitTest connectedDebugAndroidTest assembleDebug
+            result=$?
+            if [ "$result" -ne 0 ]; then
+              mkdir -p build/ci-diagnostics
+              adb logcat -d -t 10000 > build/ci-diagnostics/logcat.txt || true
+              adb shell dumpsys activity processes > build/ci-diagnostics/activity-processes.txt || true
+            fi
+            exit "$result"
+
+      - name: Capture Android emulator logcat
+        if: always()
+        run: adb logcat -d -t 10000 > apps/android/build/ci-diagnostics/final-logcat.txt || true
+      - name: Upload Android test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-diagnostics
+          if-no-files-found: ignore
+          path: |
+            apps/android/app/build/reports/tests/
+            apps/android/app/build/outputs/androidTest-results/
+            apps/android/build/ci-diagnostics/
 
   e2e:
     needs: [backend, desktop, web]
@@ -187,6 +211,9 @@ jobs:
         run: |
           npm ci
           npm run build
+      - name: Install E2E accessibility dependencies
+        working-directory: tests/e2e
+        run: npm ci
       - name: Install Playwright Chromium
         working-directory: apps/web
         run: npx playwright install --with-deps chromium

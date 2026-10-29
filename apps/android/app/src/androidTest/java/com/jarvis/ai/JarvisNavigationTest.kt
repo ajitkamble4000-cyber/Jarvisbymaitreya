@@ -35,4 +35,11 @@ class JarvisNavigationTest {
         composeRule.onNodeWithText("Email").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Password").performScrollTo().assertIsDisplayed()
     }
+
+    @Test
+    fun signedOutTaskScreenExplainsThatSignInIsRequired() {
+        composeRule.onNodeWithContentDescription("Tasks").performClick()
+        composeRule.onNodeWithText("Sign in to load your tasks.").assertIsDisplayed()
+    }
+
 }
