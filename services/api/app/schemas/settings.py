@@ -19,7 +19,7 @@ TOOL_NAME_PATTERN = r"^[a-z][a-z0-9_]{0,79}$"
 LANGUAGE_PATTERN = r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$"
 CLOCK_PATTERN = r"^([01][0-9]|2[0-3]):[0-5][0-9]$"
 
-ProviderId = Literal["gemini", "huggingface"]
+ProviderId = Literal["gemini", "huggingface", "openrouter"]
 
 
 def _reject_bool(value: Any) -> Any:

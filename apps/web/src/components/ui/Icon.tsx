@@ -24,6 +24,7 @@ const PATHS = {
   close: "M6 6l12 12M18 6L6 18",
   plus: "M12 5v14M5 12h14",
   send: "M4 12l16-8-6 16-2-6z",
+  download: "M12 3v12m0 0 5-5m-5 5-5-5M5 17v3h14v-3",
   stop: "M7 7h10v10H7z",
   copy: "M9 9h10v10H9zM5 15V5h10",
   refresh: "M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5",

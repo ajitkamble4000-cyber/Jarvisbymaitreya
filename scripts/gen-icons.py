@@ -1,7 +1,7 @@
 """Generate the PWA icons for the JARVIS web app with the Python standard library only.
 
-The art is placeholder: a square in the dark theme accent colour (#22d3ee) with a centred letter J
-drawn from rectangles in the on-accent colour (#04171d). Replace the output with brand artwork
+The art is placeholder: a square in the dark theme accent colour (#a3be8c) with a centred letter J
+drawn from rectangles in the on-accent colour (#142016). Replace the output with brand artwork
 before a public release.
 
 Usage (from the repository root):
@@ -27,8 +27,8 @@ from pathlib import Path
 
 logger = logging.getLogger("jarvis.web")
 
-ACCENT_RGB = (0x22, 0xD3, 0xEE)  # dark theme --accent
-GLYPH_RGB = (0x04, 0x17, 0x1D)  # dark theme --on-accent
+ACCENT_RGB = (0xA3, 0xBE, 0x8C)  # dark theme --accent
+GLYPH_RGB = (0x14, 0x20, 0x16)  # dark theme --on-accent
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUT = REPO_ROOT / "apps" / "web" / "public" / "icons"

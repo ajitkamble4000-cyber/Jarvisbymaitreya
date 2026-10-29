@@ -142,10 +142,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="AI chat"
-        description="Ask questions, plan work, or propose an action. Device actions wait for approval where your settings require it."
-      />
+      <PageHeader title="AI chat" description="A clear space to think, make plans, and get things done." />
       <div className="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)]">
         <Card className="p-3 sm:p-4">
           <ConversationList activeId={conversationId} />
@@ -201,9 +198,34 @@ export default function ChatPage() {
                 ) : allMessages.length > 0 && messages.length === 0 ? (
                   <p className="m-auto max-w-sm text-center text-sm text-muted">No message in this conversation matches “{finding.trim()}”.</p>
                 ) : messages.length === 0 ? (
-                  <p className="m-auto max-w-sm text-center text-sm text-muted">
-                    Nothing here yet. Type a message below to start. Replies stream in as they are written.
-                  </p>
+                  <div className="m-auto flex w-full max-w-2xl flex-col items-center gap-7 py-10 text-center sm:py-16">
+                    <div className="flex size-12 items-center justify-center rounded-full border border-line bg-raised text-accent">
+                      <span aria-hidden="true" className="text-xl">✳</span>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <h2 className="text-3xl font-medium text-ink sm:text-4xl">A little more room to think.</h2>
+                      <p className="mx-auto max-w-lg text-sm text-muted sm:text-base">Ask a question, untangle an idea, or figure out what to do next.</p>
+                    </div>
+                    {!conversationId ? (
+                      <div className="grid w-full gap-2 sm:grid-cols-3">
+                        {[
+                          "Help me make a plan for today",
+                          "Explain something I've been curious about",
+                          "Help me turn an idea into a first step",
+                        ].map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            className="min-h-16 rounded-lg border border-line bg-surface/80 px-4 py-3 text-left text-sm text-ink transition hover:border-accent/60 hover:bg-raised focus-visible:outline-accent"
+                            onClick={() => setPrefill((current) => ({ id: current.id + 1, text: suggestion, truncated: false }))}
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                    <p className="text-xs text-muted">Your conversations stay in your history.</p>
+                  </div>
                 ) : (
                   messages.map((message) => {
                     const streamingAssistant = message.status === "streaming";

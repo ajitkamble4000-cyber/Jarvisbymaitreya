@@ -104,8 +104,8 @@ async def test_listing_creates_default_rows_once_per_provider(client: AsyncClien
     assert first.status_code == second.status_code == 200
 
     items = first.json()["items"]
-    assert [item["id"] for item in items] == ["gemini", "huggingface"]
-    assert [item["display_name"] for item in items] == ["Google Gemini", "Hugging Face Inference"]
+    assert [item["id"] for item in items] == ["gemini", "huggingface", "openrouter"]
+    assert [item["display_name"] for item in items] == ["Google Gemini", "Hugging Face Inference", "OpenRouter"]
     for item in items:
         assert item["enabled"] is False
         assert item["configured"] is False
@@ -128,7 +128,7 @@ async def test_listing_creates_default_rows_once_per_provider(client: AsyncClien
 
     async with app.state.session_factory() as db:
         rows = (await db.scalars(select(ProviderConfig))).all()
-        assert len(rows) == 2
+        assert len(rows) == 3
 
 
 async def test_unknown_provider_ids_return_404_on_every_route(client: AsyncClient) -> None:
@@ -263,7 +263,7 @@ async def test_selected_model_is_stored_without_validation_when_unconfigured(cli
 
 async def test_models_return_409_without_a_credential(client: AsyncClient) -> None:
     await create_owner(client)
-    for provider_id in ("gemini", "huggingface"):
+    for provider_id in ("gemini", "huggingface", "openrouter"):
         response = await client.get(f"{API}/{provider_id}/models")
         assert response.status_code == 409
         assert response.json()["error"]["code"] == "not_configured"

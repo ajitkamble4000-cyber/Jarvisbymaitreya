@@ -77,6 +77,8 @@ class Settings(BaseSettings):
     gemini_base_url: str = "https://generativelanguage.googleapis.com"
     huggingface_base_url: str = "https://router.huggingface.co"
     huggingface_whoami_url: str = "https://huggingface.co/api/whoami-v2"
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_site_url: str = "https://localhost"
 
     # Optional integrations (OAuth). A provider is offered only when both of its values are set.
     google_oauth_client_id: str | None = None

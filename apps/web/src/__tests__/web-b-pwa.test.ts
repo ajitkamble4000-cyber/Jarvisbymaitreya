@@ -60,7 +60,7 @@ describe("PWA: manifest", () => {
   it("has the name, start page and standalone display the app needs", () => {
     expect(manifest.name).toBe("JARVIS AI");
     expect(manifest.short_name).toBe("JARVIS");
-    expect(manifest.start_url).toBe("/overview");
+    expect(manifest.start_url).toBe("/chat");
     expect(manifest.display).toBe("standalone");
   });
 
@@ -107,7 +107,7 @@ describe("PWA: index.html", () => {
   it("links the manifest, the apple touch icon and the theme colour", () => {
     expect(html).toMatch(/<link rel="manifest" href="\/manifest\.webmanifest"/);
     expect(html).toMatch(/<link rel="apple-touch-icon" sizes="180x180" href="\/icons\/apple-touch-icon\.png"/);
-    expect(html).toMatch(/<meta name="theme-color" content="#0b0d12"/);
+    expect(html).toMatch(/<meta name="theme-color" content="#111814"/);
   });
 
   it("declares the iOS web app settings", () => {

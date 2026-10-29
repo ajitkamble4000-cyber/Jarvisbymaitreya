@@ -31,6 +31,7 @@ from app.providers.base import (
 )
 from app.providers.gemini import GeminiProvider
 from app.providers.huggingface import HuggingFaceProvider
+from app.providers.openrouter import OpenRouterProvider
 from app.providers.retry import elapsed_ms
 from app.security.crypto import SecretBox, SecretDecryptionError, mask_secret
 from app.services.audit import record_audit
@@ -39,7 +40,7 @@ from app.services.usage import record_usage
 
 log = logging.getLogger("jarvis.providers")
 
-_CATALOG: tuple[type[AIProvider], ...] = (GeminiProvider, HuggingFaceProvider)
+_CATALOG: tuple[type[AIProvider], ...] = (GeminiProvider, HuggingFaceProvider, OpenRouterProvider)
 _MAX_STORED_MESSAGE_CHARS = 300
 _REDACTED = "[redacted]"
 
@@ -357,6 +358,15 @@ class ProviderRegistry:
                 base_url=self._settings.huggingface_base_url,
                 http=self._http,
                 whoami_url=self._settings.huggingface_whoami_url,
+                timeout_seconds=timeout_seconds,
+                max_retries=max_retries,
+            )
+        if provider_cls is OpenRouterProvider:
+            return OpenRouterProvider(
+                api_key=api_key,
+                base_url=self._settings.openrouter_base_url,
+                http=self._http,
+                site_url=self._settings.openrouter_site_url,
                 timeout_seconds=timeout_seconds,
                 max_retries=max_retries,
             )

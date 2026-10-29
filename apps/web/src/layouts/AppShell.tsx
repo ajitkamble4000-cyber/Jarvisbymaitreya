@@ -101,6 +101,22 @@ export function AppShell() {
   const [navOpen, setNavOpen] = useState(false);
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installHelpOpen, setInstallHelpOpen] = useState(false);
+
+  useEffect(() => {
+    const captureInstallPrompt = (event: Event): void => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+    const clearInstallPrompt = (): void => setInstallPrompt(null);
+    window.addEventListener("beforeinstallprompt", captureInstallPrompt);
+    window.addEventListener("appinstalled", clearInstallPrompt);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", captureInstallPrompt);
+      window.removeEventListener("appinstalled", clearInstallPrompt);
+    };
+  }, []);
 
   // Ctrl+K or Cmd+K opens the palette from anywhere in the shell.
   useEffect(() => {
@@ -144,6 +160,16 @@ export function AppShell() {
     });
   };
 
+  const installApp = async (): Promise<void> => {
+    if (!installPrompt) {
+      setInstallHelpOpen(true);
+      return;
+    }
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    if (choice.outcome === "accepted") setInstallPrompt(null);
+  };
+
   return (
     <div className="flex min-h-screen">
       <a
@@ -165,6 +191,10 @@ export function AppShell() {
           <p className="truncate text-xs text-muted" title={auth.user?.email}>
             {auth.user?.email ?? ""}
           </p>
+          <Button size="sm" variant="secondary" className="w-full justify-start" onClick={() => void installApp()}>
+            <Icon name="download" className="size-4" />
+            Install app
+          </Button>
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" className="flex-1" onClick={() => setCustomizeOpen(true)}>
               Customise
@@ -180,6 +210,10 @@ export function AppShell() {
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-line bg-canvas/85 px-4 backdrop-blur md:hidden">
           <Brand />
           <div className="flex items-center gap-2">
+            <Button size="sm" variant="secondary" onClick={() => void installApp()}>
+              <Icon name="download" className="size-4" />
+              Install
+            </Button>
             <LiveIndicator status={liveStatus} />
             <IconButton label="Open navigation" icon={<Icon name="menu" />} onClick={() => setNavOpen(true)} />
           </div>
@@ -202,6 +236,15 @@ export function AppShell() {
         </div>
       </Dialog>
 
+      <Dialog open={installHelpOpen} onClose={() => setInstallHelpOpen(false)} title="Install JARVIS" description="Add JARVIS to your home screen for an app-like experience.">
+        <div className="flex flex-col gap-3 text-sm text-muted">
+          <p><strong className="text-ink">iPhone or iPad:</strong> open this page in Safari, tap Share, then choose Add to Home Screen.</p>
+          <p><strong className="text-ink">Android:</strong> open the browser menu and choose Install app or Add to Home screen.</p>
+          <p><strong className="text-ink">Desktop:</strong> use the install icon in your browser's address bar, when available.</p>
+          <p className="text-xs">Installation is available when this site is served over HTTPS. The app needs an internet connection.</p>
+        </div>
+      </Dialog>
+
       <SidebarCustomizeDialog open={customizeOpen} onClose={() => setCustomizeOpen(false)} items={NAV_ITEMS} />
       <CommandPalette
         open={paletteOpen}
@@ -215,4 +258,9 @@ export function AppShell() {
       <WakeWordListener />
     </div>
   );
+}
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }

@@ -58,7 +58,7 @@ export const routes: RouteObject[] = [
       {
         element: <AppShell />,
         children: [
-          { index: true, element: <Navigate to="/overview" replace /> },
+          { index: true, element: <Navigate to="/chat" replace /> },
           { path: "overview", ...page(() => import("./pages/overview/OverviewPage")) },
           { path: "chat/:conversationId?", ...page(() => import("./pages/chat/ChatPage")) },
           { path: "voice", ...page(() => import("./pages/voice/VoicePage")) },

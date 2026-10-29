@@ -25,11 +25,14 @@ from app.providers.base import (
 )
 from app.providers.gemini import GeminiProvider
 from app.providers.huggingface import HuggingFaceProvider
+from app.providers.openrouter import OpenRouterProvider
 
 GEMINI_KEY = "AIzaSy-unit-test-secret-9f3c"
 HF_TOKEN = "hf_unit_test_secret_token_7d2a"
+OR_TOKEN = "or_unit_test_secret_token_7d2a"
 GEMINI_BASE = "https://gemini.example.test"
 HF_BASE = "https://hf.example.test"
+OR_BASE = "https://openrouter.example.test/api/v1"
 WHOAMI_URL = "https://whoami.example.test/api/whoami-v2"
 
 Handler = Callable[[httpx.Request], httpx.Response | Any]
@@ -68,6 +71,16 @@ def _huggingface(handler: Handler, *, max_retries: int = 0) -> HuggingFaceProvid
     )
 
 
+def _openrouter(handler: Handler, *, max_retries: int = 0) -> OpenRouterProvider:
+    return OpenRouterProvider(
+        api_key=OR_TOKEN,
+        base_url=OR_BASE,
+        http=_client(handler),
+        timeout_seconds=5.0,
+        max_retries=max_retries,
+    )
+
+
 def _gemini_request(**overrides: Any) -> GenerationRequest:
     values: dict[str, Any] = {
         "model": "gemini-2.5-flash",
@@ -94,6 +107,21 @@ def _hf_request(**overrides: Any) -> GenerationRequest:
         ],
         "temperature": 0.5,
         "max_output_tokens": 64,
+        "tools": [ToolDefinition(name="get_weather", description="Current weather", parameters=WEATHER_SCHEMA)],
+    }
+    values.update(overrides)
+    return GenerationRequest(**values)
+
+
+def _openrouter_request(**overrides: Any) -> GenerationRequest:
+    values: dict[str, Any] = {
+        "model": "openai/gpt-4o-mini",
+        "messages": [
+            ChatMessage(role="system", content="Be brief."),
+            ChatMessage(role="user", content="Weather in Oslo?"),
+        ],
+        "temperature": 0.4,
+        "max_output_tokens": 128,
         "tools": [ToolDefinition(name="get_weather", description="Current weather", parameters=WEATHER_SCHEMA)],
     }
     values.update(overrides)
@@ -134,6 +162,88 @@ async def _collect(stream: AsyncIterator[StreamEvent]) -> list[StreamEvent]:
 # ---------------------------------------------------------------------------
 # Gemini: generation
 # ---------------------------------------------------------------------------
+
+
+async def test_openrouter_request_shape_and_response_parsing() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "id": "chatcmpl-1",
+                "choices": [
+                    {
+                        "message": {
+                            "role": "assistant",
+                            "content": "Sunny today.",
+                            "tool_calls": [
+                                {
+                                    "id": "call_1",
+                                    "type": "function",
+                                    "function": {"name": "get_weather", "arguments": '{"city":"Oslo"}'},
+                                }
+                            ],
+                        },
+                        "finish_reason": "tool_calls",
+                    }
+                ],
+                "usage": {"prompt_tokens": 12, "completion_tokens": 5, "total_tokens": 17},
+            },
+        )
+
+    result = await _openrouter(handler).generate_response(_openrouter_request())
+
+    request = seen[0]
+    assert request.method == "POST"
+    assert str(request.url) == f"{OR_BASE}/chat/completions"
+    assert request.headers["Authorization"] == f"Bearer {OR_TOKEN}"
+    assert request.headers["HTTP-Referer"] == "https://localhost"
+    assert request.headers["X-Title"] == "JARVIS"
+
+    body = json.loads(request.content)
+    assert body["model"] == "openai/gpt-4o-mini"
+    assert body["messages"][0] == {"role": "system", "content": "Be brief."}
+    assert body["temperature"] == 0.4
+    assert body["max_tokens"] == 128
+    assert body["tools"][0]["function"]["name"] == "get_weather"
+
+    assert result.model == "openai/gpt-4o-mini"
+    assert result.text == "Sunny today."
+    assert result.finish_reason == "tool_calls"
+    assert len(result.tool_calls) == 1
+    assert result.tool_calls[0].name == "get_weather"
+    assert result.tool_calls[0].arguments == {"city": "Oslo"}
+    assert result.usage == TokenUsage(input_tokens=12, output_tokens=5, total_tokens=17, estimated=False)
+
+
+async def test_openrouter_health_and_model_listing() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if request.method == "GET":
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {"id": "openai/gpt-4o-mini", "name": "OpenAI GPT-4o mini"},
+                        {"id": "anthropic/claude-3.5-sonnet", "name": "Anthropic Claude 3.5 Sonnet"},
+                    ]
+                },
+            )
+        raise AssertionError(f"Unexpected method: {request.method}")
+
+    provider = _openrouter(handler)
+    health = await provider.health_check()
+    models = await provider.list_models()
+
+    assert health.ok is True
+    assert len(seen) == 2
+    assert str(seen[0].url) == f"{OR_BASE}/models?limit=1"
+    assert [m.id for m in models] == ["openai/gpt-4o-mini", "anthropic/claude-3.5-sonnet"]
+    assert models[0].display_name == "OpenAI GPT-4o mini"
 
 
 async def test_gemini_request_shape_and_response_parsing() -> None:

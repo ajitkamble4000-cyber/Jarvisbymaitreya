@@ -2,11 +2,11 @@
   "name": "JARVIS AI",
   "short_name": "JARVIS",
   "description": "JARVIS AI command centre",
-  "start_url": "/overview",
+  "start_url": "/chat",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0b0d12",
-  "theme_color": "#0b0d12",
+  "background_color": "#111814",
+  "theme_color": "#111814",
   "icons": [
     {
       "src": "/icons/icon-192.png",
