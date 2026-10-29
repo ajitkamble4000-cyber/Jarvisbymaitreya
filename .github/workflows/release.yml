@@ -25,7 +25,9 @@ jobs:
           java-version: "21"
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
 
       - name: Install Android 35 build components
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
@@ -34,7 +36,11 @@ jobs:
         working-directory: apps/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew --no-daemon clean testDebugUnitTest assembleDebug
+
+      - name: Verify APK
+        shell: bash
+        run: test -s apps/android/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -63,7 +69,13 @@ jobs:
 
       - name: Build and package Windows bundle
         working-directory: apps/desktop
-        run: npm run dist -- --win portable --x64
+        run: npm run dist -- --win nsis --x64
+
+      - name: Verify Windows executable
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "release/*.exe" | Select-Object -First 1
+          if ($null -eq $installer -or $installer.Length -le 0) { throw "Windows installer is missing or empty." }
 
       - name: Upload Windows build artifacts
         uses: actions/upload-artifact@v4
@@ -71,16 +83,19 @@ jobs:
           name: jarvis-desktop-windows
           path: |
             apps/desktop/release/*.zip
-            apps/desktop/release/**/*.exe
-            apps/desktop/release/win-unpacked/**
+            apps/desktop/release/*.exe
 
   github-release:
     name: Publish to GitHub Release
     needs: [android-debug, windows-desktop]
     runs-on: ubuntu-24.04
-    if: startsWith(github.ref, 'refs/tags/')
+    if: >-
+      always() && startsWith(github.ref, 'refs/tags/') &&
+      needs.windows-desktop.result == 'success' &&
+      (needs.android-debug.result == 'success' || needs.android-debug.result == 'failure')
     steps:
       - name: Download APK artifact
+        if: needs.android-debug.result == 'success'
         uses: actions/download-artifact@v4
         with:
           name: jarvis-android-debug.apk
@@ -92,10 +107,29 @@ jobs:
           name: jarvis-desktop-windows
           path: dist/windows
 
+      - name: Verify downloaded artifacts
+        shell: bash
+        env:
+          ANDROID_RESULT: ${{ needs.android-debug.result }}
+        run: |
+          test -n "$(find dist/windows -type f -name '*.exe' -size +0c -print -quit)"
+          if [[ "$ANDROID_RESULT" == "success" ]]; then
+            test -n "$(find dist/android -type f -name '*.apk' -size +0c -print -quit)"
+          fi
+
+      - name: Prepare release asset list
+        id: assets
+        shell: bash
+        env:
+          ANDROID_RESULT: ${{ needs.android-debug.result }}
+        run: |
+          files="$(find dist/windows -maxdepth 1 -type f \( -name '*.exe' -o -name '*.zip' \) -size +0c -print | sort)"
+          if [[ "$ANDROID_RESULT" == "success" ]]; then
+            files+=$'\n'"$(find dist/android -type f -name '*.apk' -size +0c -print | sort)"
+          fi
+          printf 'files<<JARVIS_ASSETS\n%s\nJARVIS_ASSETS\n' "$files" >> "$GITHUB_OUTPUT"
+
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            dist/android/*.apk
-            dist/windows/**/*.zip
-            dist/windows/**/*.exe
+          files: ${{ steps.assets.outputs.files }}

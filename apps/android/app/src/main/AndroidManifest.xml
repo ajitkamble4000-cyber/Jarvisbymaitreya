@@ -7,7 +7,7 @@
 
     <application
         android:allowBackup="true"
-        android:usesCleartextTraffic="true"
+        android:usesCleartextTraffic="${usesCleartextTraffic}"
         android:icon="@mipmap/ic_launcher"
         android:label="JARVIS"
         android:roundIcon="@mipmap/ic_launcher_round"

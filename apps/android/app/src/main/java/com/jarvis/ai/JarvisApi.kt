@@ -7,7 +7,21 @@ import java.net.CookieHandler
 import java.net.CookieManager
 import java.net.CookiePolicy
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
+
+internal fun normalizeBaseUrl(value: String): String {
+    val normalized = value.trim().trimEnd('/')
+    val uri = runCatching { URI(normalized) }
+        .getOrElse { throw IllegalArgumentException("Enter a valid backend URL.") }
+    require(uri.scheme == "http" || uri.scheme == "https") {
+        "Backend URL must begin with http:// or https://."
+    }
+    require(!uri.host.isNullOrBlank() && uri.userInfo == null && uri.query == null && uri.fragment == null) {
+        "Enter a backend URL with a host and no credentials, query, or fragment."
+    }
+    return normalized
+}
 
 object JarvisApi {
     private val cookies = CookieManager(null, CookiePolicy.ACCEPT_ALL).also {
@@ -109,8 +123,7 @@ object JarvisApi {
     }
 
     private fun openConnection(baseUrl: String, method: String, path: String): HttpURLConnection {
-        val root = baseUrl.trim().trimEnd('/')
-        require(root.startsWith("https://") || root.startsWith("http://")) { "Enter a backend URL beginning with http:// or https://." }
+        val root = normalizeBaseUrl(baseUrl)
         val connection = URL("$root/api/v1$path").openConnection() as HttpURLConnection
         connection.requestMethod = method
         connection.connectTimeout = 12_000
