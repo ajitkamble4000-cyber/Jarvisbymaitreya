@@ -136,6 +136,19 @@ def test_blank_system_instructions_add_no_section() -> None:
     assert "User instructions" not in text
 
 
+def test_ephemeral_style_guidance_is_labelled_and_optional() -> None:
+    plain = build_system_text(system_instructions="", memories=[])
+    adapted = build_system_text(
+        system_instructions="",
+        memories=[],
+        style_guidance="Possible conversational cue: confusion.",
+    )
+
+    assert "Ephemeral response-style guidance" not in plain
+    assert "Ephemeral response-style guidance" in adapted
+    assert "Possible conversational cue: confusion." in adapted
+
+
 def test_prompt_puts_system_first_then_history_in_order() -> None:
     history = [ChatMessage(role="user", content="one"), ChatMessage(role="assistant", content="two")]
 

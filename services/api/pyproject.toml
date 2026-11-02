@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jarvis-api"
-version = "1.0.0"
+version = "1.1.0rc1"
 description = "JARVIS AI backend: FastAPI service for AI providers, devices, tasks, scheduling and memory."
 requires-python = ">=3.12"
 # All versions are pinned exactly. Upgrade deliberately and re-run the test suite.

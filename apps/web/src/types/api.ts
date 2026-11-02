@@ -71,6 +71,7 @@ export interface AiSettings {
   system_instructions: string;
   stream_responses: boolean;
   include_memory: boolean;
+  emotional_adaptation_enabled: boolean;
 }
 
 /** Provider calls made today (UTC), counted from measured usage. `limit` is null when no daily limit is set. */

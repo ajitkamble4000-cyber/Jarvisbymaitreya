@@ -1,6 +1,10 @@
-Extra trust anchors for image builds.
+Extra trust anchors are supplied as BuildKit secrets so they do not remain in image layers.
 
-Put PEM certificates named *.crt here (for example a corporate or intercepting-proxy root CA) before running
-docker build. The build appends them to the image's system certificate bundle and points pip and npm at it.
-The directory holds nothing by default, so no certificate is trusted beyond the base image's bundle.
-Certificates are ignored by git (see .gitignore). Do not commit private keys here.
+For a network that requires a proxy CA, run the API build from the repository root with:
+
+```sh
+docker build --secret id=proxy_ca,src=/path/to/proxy-ca.pem -t jarvis-ai-api services/api
+```
+
+Omit `--secret` on an ordinary network. TLS verification remains enabled in both cases. Never commit a
+session-specific certificate or private key to this directory.

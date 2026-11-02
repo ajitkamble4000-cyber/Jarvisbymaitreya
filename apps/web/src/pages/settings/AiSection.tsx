@@ -209,6 +209,13 @@ function AiForm({ ai }: { ai: AiSettings }) {
           pending={save.isPending}
           onChange={(value) => save.mutate({ ai: { include_memory: value } })}
         />
+        <ImmediateSwitch
+          label="Adapt reply style to conversational cues"
+          description="Uses recent text only for the current reply. It may be uncertain, accepts corrections, and does not save an emotion history."
+          checked={ai.emotional_adaptation_enabled}
+          pending={save.isPending}
+          onChange={(value) => save.mutate({ ai: { emotional_adaptation_enabled: value } })}
+        />
       </SettingsCard>
 
       <SaveBar

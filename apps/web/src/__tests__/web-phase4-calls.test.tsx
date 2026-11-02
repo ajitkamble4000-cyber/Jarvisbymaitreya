@@ -20,6 +20,7 @@ const ai: AiSettings = {
   system_instructions: "",
   stream_responses: true,
   include_memory: true,
+  emotional_adaptation_enabled: true,
 };
 
 function json(body: unknown, status = 200): Response {

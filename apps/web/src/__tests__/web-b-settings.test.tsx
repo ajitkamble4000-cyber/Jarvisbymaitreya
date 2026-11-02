@@ -19,6 +19,7 @@ const settings: SettingsDoc = {
     system_instructions: "",
     stream_responses: true,
     include_memory: true,
+    emotional_adaptation_enabled: true,
     daily_call_limit: null,
   },
   voice: {

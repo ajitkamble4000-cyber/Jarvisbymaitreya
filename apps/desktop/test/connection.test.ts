@@ -15,7 +15,7 @@ import { removeDir, signedCancelText, signedCommandText, sleep, tempDir, TEST_SE
 function buildHello(): Hello {
   return {
     type: "hello",
-    agent_version: "1.0.0",
+    agent_version: "1.1.0-rc.1",
     os: "simulated",
     os_version: "0.0.0-simulated",
     capabilities: ["launch_app", "system_info"],
@@ -136,7 +136,7 @@ describe("AgentConnection with a fake backend", () => {
     expect(first?.authorization).toBe(`Bearer ${TEST_SECRET}`);
     expect(first?.path).toBe(WS_PATH);
     const hello = backend.framesOf("hello", first)[0];
-    expect(hello).toMatchObject({ type: "hello", agent_version: "1.0.0", os: "simulated" });
+    expect(hello).toMatchObject({ type: "hello", agent_version: "1.1.0-rc.1", os: "simulated" });
     expect(hello).toHaveProperty("resources.apps");
     expect(connection?.isConnected).toBe(true);
   });

@@ -20,7 +20,7 @@ function input(overrides: Partial<PairingRequestInput> = {}): PairingRequestInpu
     deviceType: "laptop",
     os: "simulated",
     osVersion: "0.0.0-simulated",
-    agentVersion: "1.0.0",
+    agentVersion: "1.1.0-rc.1",
     capabilities: ["launch_app", "system_info"],
     resources: {
       apps: [{ id: "chrome", label: "Google Chrome" }],

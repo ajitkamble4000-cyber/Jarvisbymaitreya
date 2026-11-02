@@ -53,6 +53,7 @@ class AiSettings(_Section):
     system_instructions: str = Field(default="", max_length=4000)
     stream_responses: StrictBool = True
     include_memory: StrictBool = True
+    emotional_adaptation_enabled: StrictBool = True
 
     @model_validator(mode="after")
     def _fallback_differs(self) -> AiSettings:

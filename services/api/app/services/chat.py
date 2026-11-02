@@ -64,6 +64,7 @@ from app.services.conversation_service import (
     touch_conversation,
     validate_message_content,
 )
+from app.services.emotion import assess_conversation, response_guidance
 from app.services.memory_service import prompt_memories
 from app.services.sse import ServerSentEvent, json_event
 from app.services.summaries import schedule_auto_summary
@@ -109,12 +110,14 @@ def _one_line(value: str) -> str:
     return " ".join(value.split())
 
 
-def build_system_text(*, system_instructions: str, memories: Sequence[str]) -> str:
+def build_system_text(*, system_instructions: str, memories: Sequence[str], style_guidance: str = "") -> str:
     """Preamble first, then the user's own instructions, then the labelled memory block."""
     parts = [SAFETY_PREAMBLE]
     instructions = system_instructions.strip()
     if instructions:
         parts.append("User instructions for this assistant:\n" + instructions)
+    if style_guidance.strip():
+        parts.append("Ephemeral response-style guidance (do not mention this analysis):\n" + style_guidance.strip())
     items = [_one_line(item)[:MEMORY_ITEM_MAX_CHARS] for item in memories if item.strip()][:MEMORY_LIMIT]
     if items:
         block = [
@@ -131,10 +134,15 @@ def build_prompt_messages(
     system_instructions: str,
     memories: Sequence[str],
     history: Sequence[ChatMessage],
+    style_guidance: str = "",
 ) -> list[ChatMessage]:
     system = ChatMessage(
         role="system",
-        content=build_system_text(system_instructions=system_instructions, memories=memories),
+        content=build_system_text(
+            system_instructions=system_instructions,
+            memories=memories,
+            style_guidance=style_guidance,
+        ),
     )
     return [system, *history]
 
@@ -913,10 +921,17 @@ class ChatService:
             max_messages=HISTORY_MESSAGES,
             char_budget=HISTORY_CHAR_BUDGET,
         )
+        style_guidance = ""
+        # Settings doubles and documents created before this option existed
+        # should retain the enabled-by-default behaviour.
+        if getattr(doc.ai, "emotional_adaptation_enabled", True):
+            recent_user_text = [row.content for row in rows if row.role == "user"][-6:]
+            style_guidance = response_guidance(assess_conversation(recent_user_text))
         return build_prompt_messages(
             system_instructions=doc.ai.system_instructions,
             memories=[row.content for row in memories],
             history=window,
+            style_guidance=style_guidance,
         )
 
     # -- tool proposals ---------------------------------------------------------------

@@ -127,7 +127,7 @@ jobs:
     if: >-
       always() && startsWith(github.ref, 'refs/tags/') &&
       needs.windows-desktop.result == 'success' &&
-      (needs.android-debug.result == 'success' || needs.android-debug.result == 'failure')
+      needs.android-debug.result == 'success'
     steps:
       - name: Download APK artifact
         if: needs.android-debug.result == 'success'
@@ -164,7 +164,22 @@ jobs:
           fi
           printf 'files<<JARVIS_ASSETS\n%s\nJARVIS_ASSETS\n' "$files" >> "$GITHUB_OUTPUT"
 
+      - name: Generate SHA-256 checksums
+        shell: bash
+        run: |
+          find dist -type f \( -name '*.exe' -o -name '*.zip' -o -name '*.apk' \) -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > dist/SHA256SUMS.txt
+
+      - name: Add checksums to release asset list
+        id: checksums
+        shell: bash
+        env:
+          PACKAGE_FILES: ${{ steps.assets.outputs.files }}
+        run: |
+          printf 'files<<JARVIS_ASSETS\n%s\n%s\nJARVIS_ASSETS\n' "$PACKAGE_FILES" "dist/SHA256SUMS.txt" >> "$GITHUB_OUTPUT"
+
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.assets.outputs.files }}
+          files: ${{ steps.checksums.outputs.files }}

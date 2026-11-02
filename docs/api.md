@@ -50,7 +50,8 @@ Base path: `/api/v1`. All bodies are JSON unless noted. Timestamps are RFC 3339 
     "max_output_tokens": 2048,              // 64..8192
     "system_instructions": "",              // ≤ 4000 chars
     "stream_responses": true,
-    "include_memory": true
+    "include_memory": true,
+    "emotional_adaptation_enabled": true  // ephemeral text/context style cues; no emotion history is stored
   },
   "voice": {
     "language": "en-US",

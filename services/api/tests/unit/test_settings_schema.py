@@ -22,6 +22,7 @@ DOCUMENTED_DEFAULTS: dict[str, Any] = {
         "system_instructions": "",
         "stream_responses": True,
         "include_memory": True,
+        "emotional_adaptation_enabled": True,
     },
     "voice": {
         "language": "en-US",

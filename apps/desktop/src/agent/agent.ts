@@ -33,7 +33,7 @@ import { ServerUrlError, normaliseServerUrl, serverHostForDisplay } from "./serv
 import { DEVICE_SECRET_NAME, SecretStoreError, type SecretStore } from "./secret-store.js";
 import { ensurePrivateDir } from "./private-files.js";
 
-export const AGENT_VERSION = "1.0.0";
+export const AGENT_VERSION = "1.1.0-rc.1";
 const DEFAULT_DEVICE_TYPE = "laptop";
 
 export interface AgentOptions {

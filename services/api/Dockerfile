@@ -8,19 +8,20 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Optional extra trust anchors (see extra-ca/README.md). Appended to the base image's system bundle;
-# pip is pointed at that bundle so it trusts the same roots as the rest of the system.
-COPY extra-ca/ /usr/local/share/extra-ca/
-RUN cat /usr/local/share/extra-ca/*.crt >> /etc/ssl/certs/ca-certificates.crt 2>/dev/null || true
-ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
-
 RUN useradd --create-home --uid 10001 jarvis && mkdir -p /app/data && chown -R jarvis:jarvis /app
 
-COPY pyproject.toml ./
-COPY app ./app
-COPY alembic ./alembic
-COPY alembic.ini ./
-RUN pip install --no-cache-dir .
+COPY --chown=jarvis:jarvis pyproject.toml ./
+COPY --chown=jarvis:jarvis app ./app
+COPY --chown=jarvis:jarvis alembic ./alembic
+COPY --chown=jarvis:jarvis alembic.ini ./
+# A managed or corporate proxy CA may be supplied as a BuildKit secret. It is
+# trusted only by this networked step and never copied into an image layer.
+RUN --mount=type=secret,id=proxy_ca,required=false \
+    if [ -s /run/secrets/proxy_ca ]; then \
+        PIP_CERT=/run/secrets/proxy_ca pip install --no-cache-dir .; \
+    else \
+        pip install --no-cache-dir .; \
+    fi
 
 USER jarvis
 EXPOSE 8000
