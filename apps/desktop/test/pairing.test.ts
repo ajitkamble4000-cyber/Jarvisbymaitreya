@@ -29,6 +29,7 @@ function input(overrides: Partial<PairingRequestInput> = {}): PairingRequestInpu
       projects: [],
       files: [],
       checks: [],
+      workspaces: [],
     },
     ...overrides,
   };

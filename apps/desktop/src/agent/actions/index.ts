@@ -1,5 +1,9 @@
 import type { ActionHandlers } from "./types.js";
 import { appAvailability } from "./app-availability.js";
+import { composeEmail } from "./compose-email.js";
+import { createFiles } from "./create-files.js";
+import { launchInstalledApp } from "./launch-installed-app.js";
+import { webSearch } from "./web-search.js";
 import { launchApp } from "./launch-app.js";
 import { openFolder } from "./open-folder.js";
 import { openProject } from "./open-project.js";
@@ -20,4 +24,8 @@ export const DEFAULT_HANDLERS: ActionHandlers = {
   read_file: readFile,
   app_availability: appAvailability,
   run_check: runCheck,
+  compose_email: composeEmail,
+  web_search: webSearch,
+  launch_installed_app: launchInstalledApp,
+  create_files: createFiles,
 };

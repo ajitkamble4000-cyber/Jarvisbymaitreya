@@ -15,13 +15,14 @@ The Windows desktop agent (`apps/desktop`) holds a long-lived WebSocket to the b
   "os": "windows",
   "os_version": "10.0.22631",
   "agent_version": "1.0.0",
-  "capabilities": ["open_url", "launch_app", "open_folder", "open_project", "system_info", "read_file", "app_availability"],
+  "capabilities": ["open_url", "launch_app", "open_folder", "open_project", "system_info", "read_file", "app_availability", "compose_email", "web_search", "launch_installed_app", "create_files"],
   "resources": {
     "apps": [{"id": "chrome", "label": "Google Chrome"}, {"id": "vscode", "label": "Visual Studio Code"}],
     "urls": [{"id": "youtube", "label": "YouTube", "url": "https://www.youtube.com"}],
     "folders": [{"id": "downloads", "label": "Downloads"}],
     "projects": [{"id": "jarvis", "label": "JARVIS project"}],
-    "files": [{"id": "notes", "label": "Meeting notes"}]
+    "files": [{"id": "notes", "label": "Meeting notes"}],
+    "workspaces": [{"id": "projects", "label": "Jarvis projects"}]
   }
 }
 ```
@@ -116,7 +117,7 @@ If `capabilities` or `resources` differ from the stored values, the backend upda
 3. Require `now < expires_at` and `issued_at ≤ now + 30 s` (clock skew).
 4. Reject if `id` or `nonce` was seen in the last 10 minutes (replay).
 5. Require `action` to be one of the supported actions below **and** its capability (the same name as the action) to be enabled in the local config. `run_check` is enabled only while the local config holds at least one valid approved check.
-6. Parse `args_json` and validate it against the action's schema. Reject extra keys.
+6. Parse `args_json` (at most 256 KB, because `create_files` carries file contents) and validate it against the action's schema. Reject extra keys.
 7. Resolve every resource id against the **local** config. Refuse ids that are not configured. The server's view is never trusted for paths.
 
 A rejected command produces a `result` with `status: failed` and an error code (`invalid_arguments`, `permission_denied`, `expired`, `replayed`, `unsupported_action`). A frame that fails its signature (`signature_invalid`) gets no result, because its command id is not authenticated. The agent also refuses a command whose `expires_at - issued_at` is longer than 540 seconds, the longest TTL the backend issues, so that the 10-minute replay record always outlives the command. Replay records are kept in `replay-store.json` in the agent's data directory and survive restarts, so a command recorded before a restart is still rejected after it. A missing file means a first start, with an empty store, unless the device is paired: a paired device must have a file, and pairing creates an empty one. A corrupt, unreadable or missing-when-paired file is never treated as empty. Until a new file is written, the agent refuses any command whose `issued_at` is before the agent started. That floor is written into the file (`issued_floor_ms`) and ends one replay window (10 minutes) after start-up.
@@ -132,6 +133,10 @@ A rejected command produces a `result` with `status: failed` and an error code (
 | `system_info` | `system_info` | `{}` | `{hostname, os, os_version, arch, cpu_count, total_memory_mb, free_memory_mb, uptime_seconds}` |
 | `read_file` | `read_file` | `{"file_id": "notes"}` | `{file_id, content, truncated, size_bytes}` (max 64 KB) |
 | `app_availability` | `app_availability` | `{"app_id": "chrome"}` | `{app_id, installed: true\|false, summary}` |
+| `compose_email` | `compose_email` | `{"to": ["a@b.co"], "cc": [], "subject": "…", "body": "…"}` (1–10 recipients, subject one line up to 200 characters, body up to 3000) | `{to, subject, sent: false, verified: false, summary}`. Opens a filled-in Gmail draft in the default browser. Nothing is sent by the agent. |
+| `web_search` | `web_search` | `{"site": "google" \| "youtube" \| "spotify", "query": "…"}` | `{site, query, verified: false, summary}` |
+| `launch_installed_app` | `launch_installed_app` | `{"name": "Whisper Flow"}` (the words the user said) | `{app, matched_by, verified: false, summary}`. Matched against the device's own Start menu. No clear match: `failed` with `not_installed` (`details.suggestions`) or `invalid_arguments` (`details.candidates`). |
+| `create_files` | `create_files` | `{"workspace_id": "projects", "folder": "portfolio", "files": [{"path": "index.html", "content": "…"}], "open_in_app_id": "vscode"}` (optional editor) | `{workspace_id, folder, created, opened_in, summary}`. Never overwrites; refuses links and paths outside the workspace. |
 | `run_check` | `run_check` | `{"check_id": "tests"}` | `{check_id, label, exit_code: 0, output_tail, truncated, duration_ms, summary}`. A failed run sends the same fields with `exit_code` set and error `check_failed`, or `timeout` (then `exit_code` is `null`). |
 
 `run_check` runs one check that the owner defined in the agent's own `agent.json` (`approvedChecks`: an absolute `command`, an `args` array, an absolute `cwd`, `timeoutSeconds`). The backend can name only the check's id. The command line never travels over the wire, and no shell is used. Output is captured as text, capped at its last 4 KB, and never interpreted. `run_check` is never reported as started, so a cancel stops it by killing its process tree.

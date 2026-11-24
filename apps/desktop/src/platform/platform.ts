@@ -69,6 +69,25 @@ export interface SystemInfo {
   uptime_seconds: number;
 }
 
+/** An app from the Windows Start menu. appId is its AppUserModelID and never leaves the device. */
+export interface StartApp {
+  name: string;
+  appId: string;
+}
+
+export interface CreateFilesRequest {
+  /** Absolute workspace root from agent.json. */
+  root: string;
+  /** Project folder relative to the root, forward slashes. */
+  folder: string;
+  files: ReadonlyArray<{ path: string; content: string }>;
+}
+
+export interface CreateFilesResult {
+  folderPath: string;
+  created: string[];
+}
+
 export interface ReadFileResult {
   content: string;
   truncated: boolean;
@@ -97,6 +116,12 @@ export interface Platform {
    */
   runCapture(request: CaptureRequest): Promise<CaptureOutcome>;
   systemInfo(): SystemInfo;
+  /** Apps listed in the Start menu, including Microsoft Store apps. */
+  listStartApps(signal: AbortSignal): Promise<StartApp[]>;
+  /** Starts a Start-menu app by its AppUserModelID, without a shell. */
+  launchStartApp(appId: string, signal: AbortSignal, onStarted: () => void): Promise<void>;
+  /** Creates new files under an approved workspace. Never overwrites; refuses links and paths outside the root. */
+  createFiles(request: CreateFilesRequest): Promise<CreateFilesResult>;
   now(): Date;
 }
 

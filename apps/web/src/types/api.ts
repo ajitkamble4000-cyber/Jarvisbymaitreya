@@ -407,6 +407,8 @@ export interface DeviceResources {
   files: Array<{ id: string; label: string }>;
   /** Labels of the approved project checks. Commands never leave the device, so only labels are sent. */
   checks?: Array<{ id: string; label: string }>;
+  /** Folders where the assistant may create new project files (create_files). Paths stay on the device. */
+  workspaces?: Array<{ id: string; label: string }>;
 }
 
 export interface DeviceOut {

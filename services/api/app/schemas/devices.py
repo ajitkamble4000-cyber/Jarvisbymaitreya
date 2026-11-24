@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.devices.protocol import DEVICE_ACTIONS
 from app.models.devices import Device
 
-RESOURCE_KINDS: tuple[str, ...] = ("apps", "urls", "folders", "projects", "files", "checks")
+RESOURCE_KINDS: tuple[str, ...] = ("apps", "urls", "folders", "projects", "files", "checks", "workspaces")
 MAX_RESOURCE_ENTRIES = 50
 MAX_RESOURCE_LABEL = 120
 MAX_RESOURCE_URL = 2048
@@ -76,7 +76,7 @@ def _clean_entry(kind: str, entry: Any) -> dict[str, str] | None:
 
 
 def sanitise_resources(raw: Any) -> dict[str, list[dict[str, str]]]:
-    """Return exactly the six resource kinds, each a list of valid entries (at most 50, unique ids).
+    """Return exactly the seven resource kinds, each a list of valid entries (at most 50, unique ids).
 
     Unknown keys, malformed entries, bad ids, labels over 120 characters and non-http(s) URLs are dropped.
     Local paths and command lines never survive this step: only ``id``, ``label`` and ``url`` (URLs only) are

@@ -5,6 +5,8 @@
  * the same schemas so that tests can assert the exact shapes the backend expects.
  */
 import { z } from "zod";
+import { isSafeRelativePath, pathKey } from "./safe-paths.js";
+import { SEARCH_SITES } from "./web-links.js";
 
 export const PROTOCOL_VERSION = 1;
 export const CANCEL_ACTION = "__cancel__";
@@ -19,6 +21,10 @@ export const SUPPORTED_ACTIONS = [
   "read_file",
   "app_availability",
   "run_check",
+  "compose_email",
+  "web_search",
+  "launch_installed_app",
+  "create_files",
 ] as const;
 
 export type ActionName = (typeof SUPPORTED_ACTIONS)[number];
@@ -48,6 +54,11 @@ export type AgentErrorCode = (typeof AGENT_ERROR_CODES)[number];
 
 /** Resource ids match the backend rule in app/schemas/devices.py. */
 export const RESOURCE_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+/** Longest args_json the agent accepts. create_files carries file contents, so this is larger than other actions need. */
+export const MAX_ARGS_JSON_LENGTH = 262_144;
+export const MAX_CREATE_FILES = 30;
+export const MAX_CREATE_FILE_BYTES = 200_000;
+export const MAX_CREATE_TOTAL_BYTES = 500_000;
 const resourceId = z.string().regex(RESOURCE_ID_PATTERN);
 const timestamp = z.string().min(1).max(64);
 
@@ -65,7 +76,7 @@ export const CommandSchema = z.object({
   type: z.literal("command"),
   id: z.string().min(1).max(128),
   action: z.string().min(1).max(64),
-  args_json: z.string().max(8192),
+  args_json: z.string().max(MAX_ARGS_JSON_LENGTH),
   issued_at: timestamp,
   expires_at: timestamp,
   nonce: z.string().min(1).max(256),
@@ -159,6 +170,55 @@ export function parseServerFrame(text: string): ServerFrame {
 
 // ---- action arguments (strict: unknown keys are rejected) ---------------------------------
 
+/** One line of text: no control characters at all. */
+const singleLine = (min: number, max: number) =>
+  z
+    .string()
+    .min(min)
+    .max(max)
+    .refine((value) => !/[\u0000-\u001f\u007f]/.test(value), "must be one line of text")
+    .refine((value) => value.trim().length >= min, "must not be blank");
+/** Multi-line text: new lines and tabs allowed, other control characters refused. */
+const multiLine = (max: number) =>
+  z
+    .string()
+    .max(max)
+    .refine((value) => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value), "must not contain control characters");
+const emailAddress = z
+  .string()
+  .min(3)
+  .max(254)
+  .regex(/^[^\s@<>(),;:"[\]\\]+@[^\s@<>(),;:"[\]\\]+\.[^\s@<>(),;:"[\]\\]+$/);
+const relativePath = z.string().refine(isSafeRelativePath, "must be a plain relative path");
+
+const CreateFilesArgs = z
+  .object({
+    workspace_id: resourceId,
+    folder: relativePath,
+    files: z
+      .array(z.object({ path: relativePath, content: multiLine(MAX_CREATE_FILE_BYTES) }).strict())
+      .min(1)
+      .max(MAX_CREATE_FILES),
+    open_in_app_id: resourceId.optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    const keys = new Set<string>();
+    let total = 0;
+    for (const file of value.files) {
+      const key = pathKey(file.path);
+      if (keys.has(key)) {
+        ctx.addIssue({ code: "custom", message: "duplicate file path", path: ["files"] });
+        return;
+      }
+      keys.add(key);
+      total += Buffer.byteLength(file.content, "utf8");
+    }
+    if (total > MAX_CREATE_TOTAL_BYTES) {
+      ctx.addIssue({ code: "custom", message: "files are too large in total", path: ["files"] });
+    }
+  });
+
 export const ActionArgSchemas = {
   launch_app: z.object({ app_id: resourceId }).strict(),
   open_url: z.union([
@@ -171,6 +231,17 @@ export const ActionArgSchemas = {
   read_file: z.object({ file_id: resourceId }).strict(),
   app_availability: z.object({ app_id: resourceId }).strict(),
   run_check: z.object({ check_id: resourceId }).strict(),
+  compose_email: z
+    .object({
+      to: z.array(emailAddress).min(1).max(10),
+      cc: z.array(emailAddress).max(10).optional(),
+      subject: singleLine(1, 200),
+      body: multiLine(3000),
+    })
+    .strict(),
+  web_search: z.object({ site: z.enum(SEARCH_SITES), query: singleLine(1, 200) }).strict(),
+  launch_installed_app: z.object({ name: singleLine(1, 100) }).strict(),
+  create_files: CreateFilesArgs,
 } satisfies Record<ActionName, z.ZodType>;
 
 export type ActionArgs = {
@@ -194,6 +265,7 @@ export const ResourcesSchema = z.object({
   projects: z.array(ResourceEntrySchema).max(50),
   files: z.array(ResourceEntrySchema).max(50),
   checks: z.array(ResourceEntrySchema).max(50),
+  workspaces: z.array(ResourceEntrySchema).max(50),
 });
 export type Resources = z.infer<typeof ResourcesSchema>;
 

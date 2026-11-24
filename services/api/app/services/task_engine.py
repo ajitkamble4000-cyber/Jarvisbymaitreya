@@ -234,6 +234,15 @@ def _default_title(spec: ToolSpec, arguments: Mapping[str, Any], labels: Mapping
         return f"Check whether {labels.get('app') or arguments.get('app')} is installed{on_device}"
     if name == "run_project_check":
         return f"Run check {labels.get('check') or arguments.get('check')}{on_device}"
+    if name == "compose_email":
+        return f"Open a Gmail draft to {labels.get('to')}{on_device}"
+    if name == "web_search":
+        return f"Search {labels.get('site')} for \"{labels.get('query')}\"{on_device}"
+    if name == "launch_installed_app":
+        return f"Open {labels.get('app') or arguments.get('name')}{on_device}"
+    if name == "create_files":
+        opened = f" and open in {labels['app']}" if labels.get("app") else ""
+        return f"Create {labels.get('files')} files in {labels.get('folder')}{opened}{on_device}"
     if name == "save_memory":
         return "Save a memory"
     if name == "create_reminder":

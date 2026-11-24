@@ -397,7 +397,7 @@ export class Agent {
     const config = this.config;
     const resources: Resources = config
       ? resourcesForServer(config)
-      : { apps: [], urls: [], folders: [], projects: [], files: [], checks: [] };
+      : { apps: [], urls: [], folders: [], projects: [], files: [], checks: [], workspaces: [] };
     return {
       type: "hello",
       agent_version: AGENT_VERSION,

@@ -39,7 +39,7 @@ class OnlineChecker(Protocol):
 class ResolvedTarget:
     """What the agent receives on the wire (ids only), plus labels for the human title."""
 
-    wire_args: dict[str, str]
+    wire_args: dict[str, Any]
     labels: dict[str, str]
 
 
@@ -154,6 +154,9 @@ def _find(entries: Sequence[Mapping[str, str]], value: str, what: str) -> Mappin
     )
 
 
+_SEARCH_SITE_LABELS = {"google": "Google", "youtube": "YouTube", "spotify": "Spotify"}
+
+
 def resolve_target(device: Device, spec: ToolSpec, arguments: Mapping[str, Any]) -> ResolvedTarget:
     """Map validated arguments onto approved resource ids. Raises ``resource_not_approved`` on any miss."""
     resources = sanitise_resources(device.resources)
@@ -203,6 +206,36 @@ def resolve_target(device: Device, spec: ToolSpec, arguments: Mapping[str, Any])
 
     if action == "system_info":
         return ResolvedTarget({}, {})
+
+    if action == "compose_email":
+        to = [str(address) for address in arguments["to"]]
+        cc = [str(address) for address in arguments.get("cc") or []]
+        wire: dict[str, Any] = {"to": to, "subject": str(arguments["subject"]), "body": str(arguments.get("body") or "")}
+        if cc:
+            wire["cc"] = cc
+        return ResolvedTarget(wire, {"to": ", ".join(to), "subject": str(arguments["subject"])})
+
+    if action == "web_search":
+        site = str(arguments["site"])
+        return ResolvedTarget(
+            {"site": site, "query": str(arguments["query"])},
+            {"site": _SEARCH_SITE_LABELS.get(site, site), "query": str(arguments["query"])},
+        )
+
+    if action == "launch_installed_app":
+        # The device matches the spoken name against its own Start menu; no resource list is involved.
+        return ResolvedTarget({"name": str(arguments["name"])}, {"app": str(arguments["name"])})
+
+    if action == "create_files":
+        workspace = _find(resources["workspaces"], str(arguments.get("workspace") or "projects"), "workspace")
+        files = [{"path": str(item["path"]), "content": str(item["content"])} for item in arguments["files"]]
+        wire = {"workspace_id": workspace["id"], "folder": str(arguments["folder"]), "files": files}
+        labels = {"workspace": workspace["label"], "folder": str(arguments["folder"]), "files": str(len(files))}
+        if arguments.get("open_in"):
+            app = _find(resources["apps"], str(arguments["open_in"]), "app")
+            wire["open_in_app_id"] = app["id"]
+            labels["app"] = app["label"]
+        return ResolvedTarget(wire, labels)
 
     raise ProposalRefusedError("unsupported", "This action is not supported.")
 

@@ -26,6 +26,7 @@ function buildHello(): Hello {
       projects: [],
       files: [],
       checks: [],
+      workspaces: [],
     },
   };
 }

@@ -121,7 +121,20 @@ describe("config", () => {
       "system_info",
       "read_file",
       "app_availability",
+      "compose_email",
+      "web_search",
+      "launch_installed_app",
+      "create_files",
     ]);
+    expect(config.approvedWorkspaces.map((entry) => entry.id)).toEqual(["projects"]);
+  });
+
+  it("loads an older agent.json without approvedWorkspaces and leaves the new actions off", () => {
+    const old = { ...defaultConfig(), capabilities: { open_url: true, launch_app: true } } as Record<string, unknown>;
+    delete old.approvedWorkspaces;
+    const config = parseConfig(JSON.stringify(old));
+    expect(config.approvedWorkspaces).toEqual([]);
+    expect(enabledCapabilities(config)).toEqual(["launch_app", "open_url"]);
   });
 
   it("returns defaults when agent.json does not exist yet", async () => {

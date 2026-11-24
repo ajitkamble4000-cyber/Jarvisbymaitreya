@@ -10,6 +10,7 @@ import {
   CommandSchema,
   PROTOCOL_VERSION,
   isSupportedAction,
+  type ActionArgs,
   type ActionName,
   type AgentErrorCode,
 } from "../shared/protocol.js";
@@ -23,6 +24,7 @@ import {
   type ApprovedFolder,
   type ApprovedProject,
   type ApprovedUrl,
+  type ApprovedWorkspace,
 } from "./config.js";
 import type { ReplayCache } from "./replay-store.js";
 
@@ -46,7 +48,17 @@ export type ResolvedTarget =
   | { action: "open_project"; project: ApprovedProject; app: ApprovedApp }
   | { action: "read_file"; file: ApprovedFile }
   | { action: "run_check"; check: ApprovedCheck }
-  | { action: "system_info" };
+  | { action: "system_info" }
+  | { action: "compose_email"; email: ActionArgs["compose_email"] }
+  | { action: "web_search"; site: ActionArgs["web_search"]["site"]; query: string }
+  | { action: "launch_installed_app"; name: string }
+  | {
+      action: "create_files";
+      workspace: ApprovedWorkspace;
+      folder: string;
+      files: ActionArgs["create_files"]["files"];
+      app: ApprovedApp | null;
+    };
 
 export type TargetOf<A extends ActionName> = Extract<ResolvedTarget, { action: A }>;
 
@@ -155,6 +167,32 @@ export function resolveTarget(
     }
     case "system_info":
       return { action };
+    case "compose_email":
+      // No local resource: the agent builds the Gmail link itself and opens a draft. Nothing is sent.
+      return { action, email: args as ActionArgs["compose_email"] };
+    case "web_search": {
+      const { site, query } = args as ActionArgs["web_search"];
+      return { action, site, query };
+    }
+    case "launch_installed_app":
+      // The spoken name is matched against apps installed on this device; the server never names a path.
+      return { action, name: (args as ActionArgs["launch_installed_app"]).name };
+    case "create_files": {
+      const typed = args as ActionArgs["create_files"];
+      const workspace = config.approvedWorkspaces.find((entry) => entry.id === typed.workspace_id);
+      if (workspace === undefined) {
+        return null;
+      }
+      let app: ApprovedApp | null = null;
+      if (typed.open_in_app_id !== undefined) {
+        const found = findApp(typed.open_in_app_id);
+        if (found === undefined) {
+          return null;
+        }
+        app = found;
+      }
+      return { action, workspace, folder: typed.folder, files: typed.files, app };
+    }
   }
 }
 

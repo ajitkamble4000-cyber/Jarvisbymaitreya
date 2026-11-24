@@ -16,11 +16,58 @@ import {
   type CaptureRequest,
   type ExecutableLookup,
   type Platform,
+  type CreateFilesRequest,
+  type CreateFilesResult,
   type ReadFileResult,
   type SpawnRequest,
+  type StartApp,
   type SystemInfo,
 } from "./platform.js";
 import { OutputTail } from "./output-tail.js";
+import { writeNewFiles } from "./files.js";
+
+/** How long the Start-menu app list is reused before it is read again. */
+export const START_APPS_CACHE_MS = 5 * 60_000;
+const START_APPS_TIMEOUT_MS = 20_000;
+const START_APPS_MAX_OUTPUT = 2_000_000;
+/** The only script the agent runs to list apps. It reads the Start menu and prints JSON; it changes nothing. */
+export const START_APPS_SCRIPT =
+  "[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-StartApps | Select-Object Name,AppID | ConvertTo-Json -Compress";
+
+/** Parses Get-StartApps JSON (one object or an array) into unique, well-formed entries. */
+export function parseStartApps(output: string): StartApp[] {
+  let value: unknown;
+  try {
+    value = JSON.parse(output.trim() || "[]");
+  } catch {
+    throw new PlatformError("execution_failed", "The Start menu app list could not be read.");
+  }
+  const rows = Array.isArray(value) ? value : [value];
+  const seen = new Set<string>();
+  const apps: StartApp[] = [];
+  for (const row of rows) {
+    if (typeof row !== "object" || row === null) {
+      continue;
+    }
+    const name = (row as { Name?: unknown }).Name;
+    const appId = (row as { AppID?: unknown }).AppID;
+    if (typeof name !== "string" || typeof appId !== "string") {
+      continue;
+    }
+    const cleanName = name.trim();
+    if (!cleanName || cleanName.length > 200 || !isSafeAppId(appId) || seen.has(appId)) {
+      continue;
+    }
+    seen.add(appId);
+    apps.push({ name: cleanName, appId });
+  }
+  return apps;
+}
+
+/** An AppUserModelID as Windows prints it: no control characters, quotes or line breaks. */
+export function isSafeAppId(appId: string): boolean {
+  return appId.length > 0 && appId.length <= 512 && !/[\u0000-\u001f"]/.test(appId);
+}
 
 export const START_CHECK_MS = 800;
 /** After a timeout or cancel, how long to wait for the killed tree to close its output before reporting what was kept. */
@@ -243,8 +290,80 @@ export class WindowsPlatform implements Platform {
     };
   }
 
+  private startAppsCache: { at: number; apps: StartApp[] } | null = null;
+
+  async listStartApps(signal: AbortSignal): Promise<StartApp[]> {
+    const nowMs = this.clock().getTime();
+    if (this.startAppsCache !== null && nowMs - this.startAppsCache.at < START_APPS_CACHE_MS) {
+      return this.startAppsCache.apps;
+    }
+    const systemRoot = this.systemRoot();
+    const powershell = path.win32.join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+    const env: Record<string, string> = {};
+    for (const [key, value] of Object.entries(this.env)) {
+      if (typeof value === "string") {
+        env[key] = value;
+      }
+    }
+    const outcome = await captureProcess(
+      {
+        command: powershell,
+        args: ["-NoProfile", "-NonInteractive", "-Command", START_APPS_SCRIPT],
+        cwd: systemRoot,
+        timeoutMs: START_APPS_TIMEOUT_MS,
+        signal,
+        maxOutputBytes: START_APPS_MAX_OUTPUT,
+      },
+      {
+        spawnImpl: this.spawnImpl,
+        env,
+        taskkillPath: path.win32.join(systemRoot, "System32", "taskkill.exe"),
+        nowMs: () => this.clock().getTime(),
+      },
+    );
+    if (outcome.kind === "cancelled") {
+      throw new PlatformError("cancelled", "Reading the Start menu was cancelled.");
+    }
+    if (outcome.kind === "timed_out" || outcome.exitCode !== 0 || outcome.truncated) {
+      throw new PlatformError("execution_failed", "The Start menu app list could not be read.");
+    }
+    const apps = parseStartApps(outcome.output);
+    this.startAppsCache = { at: nowMs, apps };
+    return apps;
+  }
+
+  async launchStartApp(appId: string, signal: AbortSignal, onStarted: () => void): Promise<void> {
+    if (!isSafeAppId(appId)) {
+      throw new PlatformError("execution_failed", "That app id cannot be started.");
+    }
+    // explorer.exe opens shell:AppsFolder entries for desktop and Store apps alike. Its exit code means nothing.
+    await startProcess(
+      {
+        executable: path.win32.join(this.systemRoot(), "explorer.exe"),
+        args: [`shell:AppsFolder\\${appId}`],
+        signal,
+        onStarted: () => onStarted(),
+        exitCodeIsFailure: false,
+      },
+      this.startCheckMs,
+      this.spawnImpl,
+    );
+  }
+
+  createFiles(request: CreateFilesRequest): Promise<CreateFilesResult> {
+    return writeNewFiles(request);
+  }
+
   now(): Date {
     return this.clock();
+  }
+
+  private systemRoot(): string {
+    const systemRoot = this.env.SystemRoot ?? this.env.SYSTEMROOT ?? this.env.windir;
+    if (systemRoot === undefined || !path.win32.isAbsolute(systemRoot)) {
+      throw new PlatformError("unsupported_platform", "The Windows system folder is unknown.");
+    }
+    return systemRoot;
   }
 
   private async launchWithoutWaiting(
