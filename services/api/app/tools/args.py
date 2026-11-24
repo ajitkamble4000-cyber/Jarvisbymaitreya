@@ -23,6 +23,14 @@ from app.services.memory_service import SensitiveContentError, find_sensitive_re
 _CONTROL_OR_PATH = re.compile(r"[\x00-\x1f\x7f/\\]")
 _CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
 _HH_MM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+_ANY_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+_EMAIL = re.compile(r'^[^\s@<>(),;:"\[\]\\]+@[^\s@<>(),;:"\[\]\\]+\.[^\s@<>(),;:"\[\]\\]+$')
+_PATH_SEGMENT = re.compile(r"^[A-Za-z0-9._-][A-Za-z0-9._ -]{0,99}$")
+_RESERVED_NAME = re.compile(r"^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$", re.IGNORECASE)
+MAX_PATH_SEGMENTS = 8
+MAX_NEW_FILES = 30
+MAX_NEW_FILE_CHARS = 200_000
+MAX_NEW_FILES_TOTAL_BYTES = 500_000
 
 TaskStatusText = Literal["queued", "running", "awaiting_approval", "completed", "failed", "cancelled"]
 MemoryToolCategory = Literal["fact", "preference", "project", "task_context"]
@@ -58,6 +66,46 @@ def _http_url(value: str) -> str:
     return value
 
 
+def _single_line(value: str) -> str:
+    cleaned = value.strip()
+    if not cleaned:
+        raise ValueError("must not be blank")
+    if _ANY_CONTROL.search(cleaned):
+        raise ValueError("must be one line of text")
+    return cleaned
+
+
+def _multi_line(value: str) -> str:
+    """Text with line breaks and tabs allowed; other control characters refused. May be empty."""
+    if _CONTROL.search(value.replace("\r", "")):
+        raise ValueError("must not contain control characters")
+    return value
+
+
+def _email(value: str) -> str:
+    cleaned = value.strip()
+    if not _EMAIL.match(cleaned):
+        raise ValueError("must be an email address")
+    return cleaned
+
+
+def _relative_path(value: str) -> str:
+    """A plain path inside a workspace: forward slashes, no '..', no drive or root, no '.git', no reserved names."""
+    segments = value.split("/")
+    if not value or len(segments) > MAX_PATH_SEGMENTS:
+        raise ValueError("must be a relative path of 1 to 8 parts")
+    for segment in segments:
+        if (
+            not _PATH_SEGMENT.match(segment)
+            or segment in (".", "..")
+            or segment.endswith((".", " "))
+            or segment.lower() == ".git"
+            or _RESERVED_NAME.match(segment)
+        ):
+            raise ValueError("must be a plain relative path")
+    return value
+
+
 def _no_secret(value: str) -> str:
     if find_sensitive_reason(value) is not None:
         raise SensitiveContentError("content looks like a secret")
@@ -82,6 +130,10 @@ DeviceText = Annotated[str, Field(min_length=1, max_length=120), AfterValidator(
 UrlText = Annotated[str, Field(min_length=1, max_length=2048), AfterValidator(_http_url)]
 SiteText = Annotated[str, Field(min_length=1, max_length=100), AfterValidator(_clean_label)]
 Message = Annotated[str, Field(min_length=1, max_length=500), AfterValidator(_clean_text)]
+EmailAddress = Annotated[str, Field(min_length=3, max_length=254), AfterValidator(_email)]
+OneLine200 = Annotated[str, Field(min_length=1, max_length=200), AfterValidator(_single_line)]
+RelativePath = Annotated[str, Field(min_length=1, max_length=240), AfterValidator(_relative_path)]
+SearchSite = Literal["google", "youtube", "spotify"]
 
 
 class ToolArgs(BaseModel):
@@ -134,6 +186,54 @@ class RunCheckArgs(DeviceToolArgs):
     """Name of one approved project check. The command itself lives only in the desktop agent's config."""
 
     check: Label
+
+
+class ComposeEmailArgs(DeviceToolArgs):
+    """A polished email to open as a Gmail draft. The device never sends it; the user presses Send in Gmail."""
+
+    to: list[EmailAddress] = Field(min_length=1, max_length=10)
+    cc: list[EmailAddress] = Field(default_factory=list, max_length=10)
+    subject: OneLine200
+    body: Annotated[str, Field(max_length=3000), AfterValidator(_multi_line)] = ""
+
+
+class WebSearchArgs(DeviceToolArgs):
+    site: SearchSite
+    query: OneLine200
+
+
+class LaunchInstalledAppArgs(DeviceToolArgs):
+    """The app name as the user said it. The device matches it against its own Start menu."""
+
+    name: Label
+
+
+class NewFileArgs(ToolArgs):
+    path: RelativePath
+    content: Annotated[str, Field(max_length=MAX_NEW_FILE_CHARS), AfterValidator(_multi_line)]
+
+
+class CreateFilesArgs(DeviceToolArgs):
+    """New files in a new or existing folder of an approved workspace. Existing files are never overwritten."""
+
+    workspace: Label = "projects"
+    folder: RelativePath
+    files: list[NewFileArgs] = Field(min_length=1, max_length=MAX_NEW_FILES)
+    open_in: Label | None = None
+
+    @model_validator(mode="after")
+    def _unique_and_bounded(self) -> CreateFilesArgs:
+        seen: set[str] = set()
+        total = 0
+        for item in self.files:
+            key = item.path.lower()
+            if key in seen:
+                raise ValueError("each file path must be unique")
+            seen.add(key)
+            total += len(item.content.encode("utf-8"))
+        if total > MAX_NEW_FILES_TOTAL_BYTES:
+            raise ValueError("files are too large in total")
+        return self
 
 
 class ListDevicesArgs(ToolArgs):

@@ -77,8 +77,12 @@ exist, the defaults below apply.
   "approvedFolders": [],
   "approvedProjects": [],
   "approvedFiles": [],
+  "approvedWorkspaces": [
+    { "id": "projects", "label": "Jarvis projects", "path": "C:\\Users\\<you>\\JarvisProjects" }
+  ],
   "capabilities": { "open_url": true, "launch_app": true, "open_folder": true, "open_project": true,
-                    "system_info": true, "read_file": true, "app_availability": true },
+                    "system_info": true, "read_file": true, "app_availability": true,
+                    "compose_email": true, "web_search": true, "launch_installed_app": true, "create_files": true },
   "pairing": null
 }
 ```
@@ -91,6 +95,19 @@ exist, the defaults below apply.
 * `approvedUrls` entries must be `http` or `https`. An `open_url` command must match an entry exactly.
 * `approvedFiles` are read only through the `read_file` action: at most 64 KB, and symbolic links and paths that pass
   through a link are refused.
+* An `agent.json` written before the voice-automation actions keeps them **off** until you add the four capability
+  flags. `approvedWorkspaces` may be missing; it then means "no workspace", so `create_files` has nowhere to write.
+
+## Voice automation actions
+
+These four actions cover the brief "do any task by voice: email, apps, VS Code".
+
+| Action | What the agent does | Safety |
+|---|---|---|
+| `compose_email` | Builds a Gmail compose link (`https://mail.google.com/mail/?…&to=&su=&body=`) and opens it in the default browser, in whichever Google account is signed in there. | Never sends. The person presses Send in Gmail. The host is fixed; only the fields come from the server. |
+| `web_search` | Opens a Google, YouTube or Spotify search. | The three site addresses are fixed in the agent. |
+| `launch_installed_app` | Reads the Start menu once every 5 minutes with `Get-StartApps` (PowerShell, no shell, read-only script), matches the spoken name locally ("Whisper Flow" → Wispr Flow, "vs code" → Visual Studio Code, close spellings), and starts the app with `explorer.exe shell:AppsFolder\<AppID>`. | The server sends only the words. Unclear names start nothing and return the closest names instead. |
+| `create_files` | Creates a new folder and files inside an `approvedWorkspaces` folder, then optionally opens it in an approved editor (VS Code). | Relative paths only, no `..`, no `.git`, no links; at most 30 files and 500 KB. Nothing is overwritten: if any file exists, nothing is written. |
 
 ## Approved project checks (`run_check`)
 
@@ -187,6 +204,9 @@ has no effect on Windows (see Security limitations).
 * Approved checks: the Windows process-tree kill (`taskkill /T /F /PID`) is written but has not been run on Windows.
   Windows exit codes, the `SystemRoot` and `PATH` handling, and the Windows paths in the examples are unverified.
 * `npm run dist` (installer) has not been run.
+* Voice automation: `Get-StartApps`, `explorer.exe shell:AppsFolder\…` launches and opening the Gmail compose link in a
+  real browser have not been run on Windows. The matcher, link builders, verifier rules and the file writer (against a
+  real temporary folder, including a linked folder) are covered by `test/voice-actions.test.ts`.
 
 ## Quick window (Ctrl+Space)
 

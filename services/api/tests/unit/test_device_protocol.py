@@ -84,7 +84,7 @@ def test_default_permissions_are_ask_for_every_reported_capability() -> None:
 
 
 def test_low_risk_set_is_a_subset_of_device_actions() -> None:
-    assert {"open_url", "open_folder", "system_info", "app_availability"} == LOW_RISK_CAPABILITIES
+    assert {"open_url", "open_folder", "system_info", "app_availability", "web_search"} == LOW_RISK_CAPABILITIES
     assert set(DEVICE_ACTIONS) >= LOW_RISK_CAPABILITIES
 
 
@@ -148,7 +148,7 @@ def test_sanitiser_drops_unknown_keys_and_extra_entry_fields() -> None:
         "folders": "not-a-list",
     }
     out = sanitise_resources(raw)
-    assert set(out) == {"apps", "urls", "folders", "projects", "files", "checks"}
+    assert set(out) == {"apps", "urls", "folders", "projects", "files", "checks", "workspaces"}
     assert out["apps"] == [{"id": "chrome", "label": "Google Chrome"}]
     assert out["urls"] == [{"id": "youtube", "label": "YouTube", "url": "https://www.youtube.com"}]
     assert out["folders"] == []
@@ -200,6 +200,7 @@ def test_sanitiser_accepts_non_dict_input() -> None:
         "projects": [],
         "files": [],
         "checks": [],
+        "workspaces": [],
     }
 
 

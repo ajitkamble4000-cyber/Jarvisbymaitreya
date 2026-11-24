@@ -101,6 +101,17 @@ export const AgentConfigSchema = z
       .array(z.object({ id: resourceId, label, path: localPath, app_id: resourceId.optional() }))
       .max(100),
     approvedFiles: z.array(z.object({ id: resourceId, label, path: localPath })).max(100),
+    // Folders where create_files may make new projects. Older agent.json files without this key load with none.
+    approvedWorkspaces: z
+      .array(
+        z.object({
+          id: resourceId,
+          label,
+          path: localPath.refine(isAbsoluteLocalPath, "workspace path must be absolute"),
+        }),
+      )
+      .max(20)
+      .default([]),
     capabilities: capabilitiesSchema,
     // Entries are validated one by one in parseConfigDetailed: an invalid entry is skipped, not run and not fatal.
     approvedChecks: z.array(z.unknown()).max(100).default([]),
@@ -128,6 +139,7 @@ export type ApprovedUrl = AgentConfig["approvedUrls"][number];
 export type ApprovedFolder = AgentConfig["approvedFolders"][number];
 export type ApprovedProject = AgentConfig["approvedProjects"][number];
 export type ApprovedFile = AgentConfig["approvedFiles"][number];
+export type ApprovedWorkspace = AgentConfig["approvedWorkspaces"][number];
 export type ApprovedCheck = z.infer<typeof ApprovedCheckSchema>;
 
 export interface SkippedCheck {
@@ -181,6 +193,9 @@ export function defaultConfig(): AgentConfig {
     approvedFolders: [],
     approvedProjects: [],
     approvedFiles: [],
+    approvedWorkspaces: [
+      { id: "projects", label: "Jarvis projects", path: path.join(os.homedir(), "JarvisProjects") },
+    ],
     capabilities: {
       open_url: true,
       launch_app: true,
@@ -189,6 +204,10 @@ export function defaultConfig(): AgentConfig {
       system_info: true,
       read_file: true,
       app_availability: true,
+      compose_email: true,
+      web_search: true,
+      launch_installed_app: true,
+      create_files: true,
     },
     approvedChecks: [],
     pairing: null,
@@ -259,6 +278,7 @@ function assertUniqueIds(config: AgentConfig): void {
     ["approvedFolders", config.approvedFolders],
     ["approvedProjects", config.approvedProjects],
     ["approvedFiles", config.approvedFiles],
+    ["approvedWorkspaces", config.approvedWorkspaces],
   ];
   for (const [name, entries] of groups) {
     const seen = new Set<string>();
@@ -350,6 +370,7 @@ export function resourcesForServer(config: AgentConfig): Resources {
     projects: config.approvedProjects.map((entry) => ({ id: entry.id, label: entry.label })),
     files: config.approvedFiles.map((entry) => ({ id: entry.id, label: entry.label })),
     checks: config.approvedChecks.map((entry) => ({ id: entry.id, label: entry.label })),
+    workspaces: config.approvedWorkspaces.map((entry) => ({ id: entry.id, label: entry.label })),
   };
 }
 

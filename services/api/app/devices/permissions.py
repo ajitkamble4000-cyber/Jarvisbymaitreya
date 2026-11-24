@@ -15,7 +15,9 @@ from app.devices.protocol import DEVICE_ACTIONS
 
 PERMISSION_MODES: tuple[str, ...] = ("ask", "allow", "deny")
 DEFAULT_PERMISSION_MODE = "ask"
-LOW_RISK_CAPABILITIES: frozenset[str] = frozenset({"open_url", "open_folder", "system_info", "app_availability"})
+LOW_RISK_CAPABILITIES: frozenset[str] = frozenset(
+    {"open_url", "open_folder", "system_info", "app_availability", "web_search"}
+)
 
 PermissionMap = dict[str, dict[str, str]]
 

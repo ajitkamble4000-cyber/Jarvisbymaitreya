@@ -13,11 +13,14 @@ from pydantic import BaseModel
 from app.tools.args import (
     AppAvailabilityArgs,
     CancelTaskArgs,
+    ComposeEmailArgs,
+    CreateFilesArgs,
     CreateReminderArgs,
     GetTaskArgs,
     ListDevicesArgs,
     ListTasksArgs,
     LaunchAppArgs,
+    LaunchInstalledAppArgs,
     OpenFolderArgs,
     OpenProjectArgs,
     OpenUrlArgs,
@@ -26,6 +29,7 @@ from app.tools.args import (
     SaveMemoryArgs,
     SendReminderArgs,
     SystemInfoArgs,
+    WebSearchArgs,
 )
 from app.tools.base import ExecutionTarget, RiskLevel, ToolSpec
 
@@ -169,6 +173,66 @@ TOOL_SPECS: tuple[ToolSpec, ...] = (
         category="development",
         notes="Always needs approval, even when the device permission is allow. Runs without a shell.",
         action="run_check",
+    ),
+    _device_tool(
+        "compose_email",
+        "Open an email draft in Gmail",
+        "Open a filled-in Gmail draft in the browser on a paired device, in the Google account signed in there. "
+        "Nothing is sent: the user reads the draft and presses Send in Gmail. Before calling, make sure you have the "
+        "recipient's email address, the subject and what the email should say; ask for anything missing, one question "
+        "at a time. Write a polished, polite email (greeting, short paragraphs, closing) that keeps every fact the user "
+        "gave and adds none. Read the address back to the user if it was spoken.",
+        ComposeEmailArgs,
+        RiskLevel.MEDIUM,
+        approval_required=True,
+        examples=(
+            "Email rahul.sharma@gmail.com that the meeting moved to 4 pm.",
+            "Write a formal email to my principal asking for leave on Monday.",
+        ),
+        category="email",
+        notes="The approval card shows the full email. The device only opens a draft; the user sends it in Gmail.",
+    ),
+    _device_tool(
+        "web_search",
+        "Search the web",
+        "Open a search on Google, YouTube or Spotify in the browser on a paired device. "
+        "Use site=youtube for videos, site=spotify for music and site=google for everything else.",
+        WebSearchArgs,
+        RiskLevel.LOW,
+        approval_required=False,
+        examples=("Open YouTube and search SVIS Annual Day.", "Play lo-fi beats on Spotify.", "Google the weather in Sanpada."),
+        category="web",
+    ),
+    _device_tool(
+        "launch_installed_app",
+        "Open any installed app",
+        "Open any app from the Start menu of a paired Windows device by the name the user said, for example "
+        "Wispr Flow, Spotify, Notepad or Visual Studio Code. The device matches the name itself and refuses unclear "
+        "matches, returning the closest names so you can ask which one was meant. Prefer launch_app when the app is "
+        "in the device's approved list.",
+        LaunchInstalledAppArgs,
+        RiskLevel.MEDIUM,
+        approval_required=True,
+        examples=("Open Wispr Flow.", "Open Spotify on my laptop.", "Launch Notepad."),
+        category="apps",
+    ),
+    _device_tool(
+        "create_files",
+        "Create project files",
+        "Create a new project folder with files, for example a website or a Python script, inside an approved "
+        "workspace on a paired device, and optionally open it in an approved editor (open_in=vscode). Pass the "
+        "workspace id or label (default projects), a new folder name, and every file with a relative path and its "
+        "full contents. Existing files are never overwritten. Keep keys and passwords out of the files; use a "
+        ".env.example with empty values instead.",
+        CreateFilesArgs,
+        RiskLevel.HIGH,
+        approval_required=True,
+        examples=(
+            "Open VS Code and make a folder called portfolio with an index.html landing page.",
+            "Write a Python script that renames photos by date and save it in a new project.",
+        ),
+        category="development",
+        notes="Always needs approval. Writes only inside the workspace folders set on the device.",
     ),
     _server_tool(
         "list_devices",

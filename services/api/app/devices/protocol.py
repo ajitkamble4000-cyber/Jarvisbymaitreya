@@ -36,6 +36,10 @@ DEVICE_ACTIONS: tuple[str, ...] = (
     "read_file",
     "app_availability",
     "run_check",
+    "compose_email",
+    "web_search",
+    "launch_installed_app",
+    "create_files",
 )
 CANCEL_ACTION = "__cancel__"
 

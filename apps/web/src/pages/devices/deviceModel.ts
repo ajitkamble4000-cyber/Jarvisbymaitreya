@@ -30,8 +30,8 @@ export function deviceStatus(device: DeviceOut): { tone: StatusTone; label: stri
 
 /** Labels only. Resource paths never leave the agent, so none are shown. Checks are listed by {@link checkLabels}. */
 export function resourceLabels(device: DeviceOut): string[] {
-  const { apps, urls, folders, projects, files } = device.resources;
-  return [...apps, ...urls, ...folders, ...projects, ...files].map((resource) => resource.label);
+  const { apps, urls, folders, projects, files, workspaces = [] } = device.resources;
+  return [...apps, ...urls, ...folders, ...projects, ...files, ...workspaces].map((resource) => resource.label);
 }
 
 /** Labels of the approved checks. The command behind each check stays on the device. */

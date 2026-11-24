@@ -10,10 +10,14 @@ import {
   type CaptureRequest,
   type ExecutableLookup,
   type Platform,
+  type CreateFilesRequest,
+  type CreateFilesResult,
   type ReadFileResult,
   type SpawnRequest,
+  type StartApp,
   type SystemInfo,
 } from "./platform.js";
+import { isSafeRelativePath } from "../shared/safe-paths.js";
 import { tailOfText } from "./output-tail.js";
 
 export const SIMULATED_BANNER = "SIMULATED PLATFORM - no real actions performed";
@@ -47,8 +51,20 @@ export interface SimulatedPlatformOptions {
   firstPid?: number;
   settleMs?: number;
   systemInfo?: Partial<SystemInfo>;
+  /** Start-menu apps reported by listStartApps. Defaults to a small fixed list. */
+  startApps?: readonly StartApp[];
+  /** Relative paths (folder/file) that already exist in every workspace, for create_files refusals. */
+  existingWorkspaceFiles?: readonly string[];
   now?: () => Date;
 }
+
+export const DEFAULT_SIMULATED_START_APPS: readonly StartApp[] = [
+  { name: "Wispr Flow", appId: "simulated.WisprFlow" },
+  { name: "Spotify", appId: "simulated.Spotify" },
+  { name: "Visual Studio Code", appId: "simulated.VSCode" },
+  { name: "Google Chrome", appId: "simulated.Chrome" },
+  { name: "Notepad", appId: "simulated.Notepad" },
+];
 
 export class SimulatedPlatform implements Platform {
   readonly kind = "simulated" as const;
@@ -169,6 +185,34 @@ export class SimulatedPlatform implements Platform {
       uptime_seconds: Math.floor(process.uptime()),
       ...this.options.systemInfo,
     };
+  }
+
+  async listStartApps(): Promise<StartApp[]> {
+    this.record("listStartApps");
+    return [...(this.options.startApps ?? DEFAULT_SIMULATED_START_APPS)];
+  }
+
+  async launchStartApp(appId: string, signal: AbortSignal, onStarted: () => void): Promise<void> {
+    this.record("launchStartApp", { appIdKnown: appId.length > 0 });
+    if (signal.aborted) {
+      throw new PlatformError("cancelled", "The start was cancelled before the app was asked to open.");
+    }
+    if (this.options.spawnFailure !== undefined) {
+      throw new PlatformError(this.options.spawnFailure, "The application could not be started.");
+    }
+    onStarted();
+  }
+
+  async createFiles(request: CreateFilesRequest): Promise<CreateFilesResult> {
+    this.record("createFiles", { fileCount: request.files.length });
+    if (!isSafeRelativePath(request.folder) || request.files.some((file) => !isSafeRelativePath(file.path))) {
+      throw new PlatformError("permission_denied", "A file name is not allowed.");
+    }
+    const existing = new Set((this.options.existingWorkspaceFiles ?? []).map((entry) => entry.toLowerCase()));
+    if (request.files.some((file) => existing.has(`${request.folder}/${file.path}`.toLowerCase()))) {
+      throw new PlatformError("execution_failed", "A file with that name already exists. Nothing was changed.");
+    }
+    return { folderPath: `simulated://${request.folder}`, created: request.files.map((file) => file.path) };
   }
 
   now(): Date {
